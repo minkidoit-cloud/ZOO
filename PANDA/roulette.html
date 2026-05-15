@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>행운의 돌림판</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at top, #1a1a4e 0%, #0d0d2b 60%, #000010 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px 40px;
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    color: #fff;
+    user-select: none;
+    overflow-x: hidden;
+  }
+
+  /* Floating stars */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.8) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 40%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 20%, rgba(255,255,255,0.9) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 60%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 10%, rgba(255,255,255,0.8) 0%, transparent 100%),
+      radial-gradient(1px 1px at 20% 80%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 65% 85%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(2px 2px at 45% 55%, rgba(255,215,0,0.5) 0%, transparent 100%),
+      radial-gradient(2px 2px at 85% 35%, rgba(255,215,0,0.4) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+    animation: twinkle 4s ease-in-out infinite alternate;
+  }
+
+  @keyframes twinkle {
+    from { opacity: 0.6; }
+    to   { opacity: 1; }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 540px;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: 4px;
+    margin-bottom: 18px;
+    background: linear-gradient(90deg, #FFD700 0%, #FFA500 40%, #FFD700 70%, #FFFACD 100%);
+    background-size: 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: goldShine 3s linear infinite;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px rgba(255,200,0,0.5));
+  }
+
+  @keyframes goldShine {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+
+  /* Wheel area */
+  .wheel-stage {
+    position: relative;
+    width: 480px;
+    height: 480px;
+    margin-bottom: 22px;
+  }
+
+  #wheel {
+    display: block;
+    filter:
+      drop-shadow(0 0 18px rgba(255, 200, 0, 0.35))
+      drop-shadow(0 0 40px rgba(100, 80, 255, 0.2));
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .btn-spin {
+    padding: 14px 52px;
+    font-size: 1.25rem;
+    font-weight: 900;
+    letter-spacing: 3px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    background: linear-gradient(135deg, #FF6B35, #F7C948, #FF6B35);
+    background-size: 200%;
+    animation: btnPulse 2.5s ease-in-out infinite;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    box-shadow: 0 6px 24px rgba(255,107,53,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  @keyframes btnPulse {
+    0%,100% { background-position: 0% 50%; box-shadow: 0 6px 24px rgba(255,107,53,0.55); }
+    50%      { background-position: 100% 50%; box-shadow: 0 8px 32px rgba(247,201,72,0.7); }
+  }
+
+  .btn-spin:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(255,107,53,0.7);
+  }
+  .btn-spin:active:not(:disabled) { transform: translateY(0); }
+  .btn-spin:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    animation: none;
+  }
+
+  .btn-new {
+    padding: 14px 20px;
+    font-size: 1rem;
+    border: 1.5px solid rgba(255,255,255,0.25);
+    border-radius: 50px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.8);
+    backdrop-filter: blur(6px);
+    transition: background 0.2s, transform 0.15s;
+  }
+  .btn-new:hover:not(:disabled) {
+    background: rgba(255,255,255,0.15);
+    transform: translateY(-2px);
+  }
+  .btn-new:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Result */
+  #resultArea {
+    min-height: 90px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+
+  .result-card {
+    width: 100%;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,215,0,0.5);
+    border-radius: 20px;
+    padding: 16px 30px;
+    text-align: center;
+    backdrop-filter: blur(12px);
+    animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 4px 30px rgba(255,200,0,0.15);
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.55) translateY(10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .result-emoji { font-size: 2rem; margin-bottom: 4px; }
+
+  .result-score {
+    font-size: 2.8rem;
+    font-weight: 900;
+    line-height: 1;
+    color: #FFD700;
+    text-shadow: 0 0 20px rgba(255,215,0,0.7);
+  }
+
+  .result-sub {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    opacity: 0.75;
+  }
+
+  /* Score board */
+  .score-board {
+    display: flex;
+    gap: 20px;
+    font-size: 0.88rem;
+    opacity: 0.65;
+    margin-bottom: 18px;
+    background: rgba(255,255,255,0.04);
+    padding: 8px 24px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .score-board .val {
+    color: #FFD700;
+    font-weight: 700;
+    font-size: 1rem;
+    opacity: 1;
+  }
+
+  /* Probability table */
+  .prob-section {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 16px;
+  }
+
+  .prob-title {
+    text-align: center;
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.45;
+    margin-bottom: 12px;
+  }
+
+  .prob-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 7px;
+  }
+
+  .prob-cell {
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 8px 4px;
+    text-align: center;
+    border-top: 3px solid transparent;
+    transition: transform 0.2s, background 0.3s;
+    cursor: default;
+  }
+
+  .prob-cell:hover { transform: translateY(-2px); }
+
+  .prob-cell .cell-emoji { font-size: 1rem; line-height: 1.2; }
+  .prob-cell .cell-score { font-size: 0.95rem; font-weight: 700; margin-top: 1px; }
+  .prob-cell .cell-pct   { font-size: 0.62rem; opacity: 0.6; margin-top: 2px; }
+
+  .prob-cell.highlight {
+    animation: cellPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes cellPop {
+    from { transform: scale(0.85); }
+    to   { transform: scale(1); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎰 행운의 돌림판 🎰</h1>
+
+  <div class="wheel-stage">
+    <canvas id="wheel" width="480" height="480"></canvas>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-spin" id="spinBtn">🎲 돌려라!</button>
+    <button class="btn-new"  id="newBtn" title="새 게임">🔄 새 게임</button>
+  </div>
+
+  <div id="resultArea"></div>
+
+  <div class="score-board">
+    <span>누적 점수 <span class="val" id="totalScore">0</span>점</span>
+    <span>스핀 횟수 <span class="val" id="spinCount">0</span>회</span>
+    <span>평균 <span class="val" id="avgScore">-</span>점</span>
+  </div>
+
+  <div class="prob-section">
+    <div class="prob-title">📊 당첨 확률 현황 (높은 점수 → 낮은 확률)</div>
+    <div class="prob-grid" id="probGrid"></div>
+  </div>
+</div>
+
+<script>
+/* ─── Config ────────────────────────────────────────────── */
+const N = 10;
+const SEG_COLORS = [
+  '#FF6B6B','#FF9F43','#F9CA24','#6AB04C','#22A6B3',
+  '#4BCFFA','#7D5FFF','#E056FD','#F0932B','#EB4D4B'
+];
+const EMOJIS = ['🍒','🌟','💎','🎯','🔥','💰','🎁','⭐','🌈','🏆'];
+
+/* ─── State ─────────────────────────────────────────────── */
+let scores, probs, rotation, isSpinning, totalScore, spinCount;
+
+/* ─── Init ──────────────────────────────────────────────── */
+function init() {
+  scores = Array.from({length: N}, () => Math.floor(Math.random() * 100) + 1);
+  probs  = calcProbs(scores);
+  rotation   = 0;
+  isSpinning = false;
+  totalScore = 0;
+  spinCount  = 0;
+  updateBoard();
+  buildProbGrid();
+  document.getElementById('resultArea').innerHTML = '';
+  drawWheel(0);
+}
+
+/* ─── Probability ───────────────────────────────────────── */
+function calcProbs(sc) {
+  const minVal = Math.min(...sc);
+  const minIdx = sc.indexOf(minVal);
+  const p = new Array(N).fill(0);
+  p[minIdx] = 0.40;
+
+  const others   = sc.map((s, i) => ({s, i})).filter(x => x.i !== minIdx);
+  const invSum   = others.reduce((acc, x) => acc + 1 / x.s, 0);
+  others.forEach(({s, i}) => { p[i] = (1 / s / invSum) * 0.60; });
+
+  return p;
+}
+
+function weightedPick(p) {
+  let r = Math.random(), cum = 0;
+  for (let i = 0; i < p.length; i++) {
+    cum += p[i];
+    if (r < cum) return i;
+  }
+  return p.length - 1;
+}
+
+/* ─── Canvas helpers ────────────────────────────────────── */
+function hexRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function lighten(hex, a) {
+  const [r,g,b] = hexRgb(hex);
+  return `rgb(${Math.min(255,r+a)},${Math.min(255,g+a)},${Math.min(255,b+a)})`;
+}
+function darken(hex, a) {
+  const [r,g,b] = hexRgb(hex);
+  return `rgb(${Math.max(0,r-a)},${Math.max(0,g-a)},${Math.max(0,b-a)})`;
+}
+
+/* ─── Draw ──────────────────────────────────────────────── */
+const canvas = document.getElementById('wheel');
+const ctx    = canvas.getContext('2d');
+const CX = canvas.width  / 2;  // 240
+const CY = canvas.height / 2;  // 240
+const R  = CX - 14;            // 226
+
+const SLICE = (2 * Math.PI) / N;
+
+function drawWheel(rot) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  /* Outer glow ring */
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(CX, CY, R + 10, 0, 2 * Math.PI);
+  const ringGrad = ctx.createConicalGradient
+    ? null // not standard
+    : (() => {
+        const g = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        g.addColorStop(0,   'rgba(255,220,0,0.9)');
+        g.addColorStop(0.25,'rgba(255,140,0,0.7)');
+        g.addColorStop(0.5, 'rgba(255,220,0,0.9)');
+        g.addColorStop(0.75,'rgba(255,80,80,0.6)');
+        g.addColorStop(1,   'rgba(255,220,0,0.9)');
+        return g;
+      })();
+  ctx.strokeStyle = ringGrad || 'rgba(255,215,0,0.85)';
+  ctx.lineWidth   = 16;
+  ctx.stroke();
+  ctx.restore();
+
+  /* Segments */
+  for (let i = 0; i < N; i++) {
+    const sa = rot + i * SLICE - Math.PI / 2;
+    const ea = sa + SLICE;
+
+    ctx.save();
+
+    /* Fill */
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.arc(CX, CY, R, sa, ea);
+    ctx.closePath();
+
+    const gr = ctx.createRadialGradient(CX, CY, R * 0.05, CX, CY, R);
+    gr.addColorStop(0,   lighten(SEG_COLORS[i], 70));
+    gr.addColorStop(0.55, SEG_COLORS[i]);
+    gr.addColorStop(1,   darken(SEG_COLORS[i], 25));
+    ctx.fillStyle = gr;
+    ctx.fill();
+
+    /* Divider line */
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+
+    ctx.restore();
+
+    /* Text */
+    ctx.save();
+    ctx.translate(CX, CY);
+    ctx.rotate(sa + SLICE / 2);
+
+    const tr = R * 0.66;
+
+    ctx.font          = '17px serif';
+    ctx.textAlign     = 'center';
+    ctx.textBaseline  = 'middle';
+    ctx.fillText(EMOJIS[i], tr, -13);
+
+    ctx.font         = 'bold 17px "Segoe UI", sans-serif';
+    ctx.fillStyle    = 'white';
+    ctx.shadowColor  = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur   = 5;
+    ctx.fillText(scores[i], tr, 5);
+
+    ctx.shadowBlur = 0;
+    ctx.font       = '10px "Segoe UI", sans-serif';
+    ctx.fillStyle  = 'rgba(255,255,255,0.75)';
+    ctx.fillText('점', tr, 19);
+
+    ctx.restore();
+  }
+
+  /* Inner accent ring */
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(CX, CY, R * 0.18 + 2, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  /* Center circle */
+  ctx.save();
+  const cg = ctx.createRadialGradient(CX - 4, CY - 4, 0, CX, CY, R * 0.18);
+  cg.addColorStop(0,   '#FFF176');
+  cg.addColorStop(0.45,'#FFD700');
+  cg.addColorStop(1,   '#B8860B');
+  ctx.beginPath();
+  ctx.arc(CX, CY, R * 0.18, 0, 2 * Math.PI);
+  ctx.fillStyle = cg;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth   = 3;
+  ctx.stroke();
+  ctx.restore();
+
+  /* Center label */
+  ctx.save();
+  ctx.font          = 'bold 11px "Segoe UI", sans-serif';
+  ctx.fillStyle     = '#fff';
+  ctx.textAlign     = 'center';
+  ctx.textBaseline  = 'middle';
+  ctx.shadowColor   = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur    = 3;
+  ctx.fillText('GO!', CX, CY);
+  ctx.restore();
+
+  /* ── Pointer (drawn on canvas, fixed) ── */
+  drawPointer();
+}
+
+function drawPointer() {
+  const px  = CX;
+  const tip = CY - R - 2;   // just outside the ring
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,200,0,0.9)';
+  ctx.shadowBlur  = 14;
+
+  ctx.beginPath();
+  ctx.moveTo(px, tip);            // tip points into the wheel (downward)
+  ctx.lineTo(px - 16, tip - 32); // upper-left
+  ctx.lineTo(px + 16, tip - 32); // upper-right
+  ctx.closePath();
+
+  const pg = ctx.createLinearGradient(px - 16, tip - 32, px + 16, tip);
+  pg.addColorStop(0,   '#FFF176');
+  pg.addColorStop(0.5, '#FFD700');
+  pg.addColorStop(1,   '#FFA500');
+  ctx.fillStyle = pg;
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ─── Ease ──────────────────────────────────────────────── */
+function easeOutQuart(t) { return 1 - Math.pow(1 - t, 4); }
+
+/* ─── Spin ──────────────────────────────────────────────── */
+function spin() {
+  if (isSpinning) return;
+  isSpinning = true;
+  document.getElementById('spinBtn').disabled = true;
+  document.getElementById('newBtn').disabled  = true;
+  document.getElementById('resultArea').innerHTML = '';
+
+  const winner = weightedPick(probs);
+  const offset = 0.15 + Math.random() * 0.70; // random position within segment
+
+  /* target rotation:
+     Segment i center is at screen angle:  rot + (i+0.5)*SLICE - π/2
+     Pointer is at top:                    -π/2
+     Condition: rot + (winner+offset)*SLICE - π/2 = -π/2 + 2πk
+                rot = -(winner+offset)*SLICE + 2πk                      */
+  const base = -(winner + offset) * SLICE;
+  const numRot = 7 + Math.floor(Math.random() * 4); // 7–10 full spins
+  const k = Math.ceil((rotation + 2 * Math.PI * numRot - base) / (2 * Math.PI));
+  const target = base + 2 * Math.PI * k;
+
+  const startRot = rotation;
+  const delta    = target - startRot;
+  const duration = 4200 + Math.random() * 2000;
+  const t0       = performance.now();
+
+  function frame(now) {
+    const t = Math.min((now - t0) / duration, 1);
+    rotation = startRot + delta * easeOutQuart(t);
+    drawWheel(rotation);
+
+    if (t < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      rotation = target;
+      drawWheel(rotation);
+      isSpinning = false;
+      document.getElementById('spinBtn').disabled = false;
+      document.getElementById('newBtn').disabled  = false;
+      showResult(winner);
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
+
+/* ─── Result ────────────────────────────────────────────── */
+function showResult(winner) {
+  const score    = scores[winner];
+  const maxScore = Math.max(...scores);
+  const minScore = Math.min(...scores);
+
+  spinCount++;
+  totalScore += score;
+  updateBoard();
+
+  let badge = '';
+  if      (score === maxScore) badge = `<span style="color:#FF6B6B">🏆 최고 점수!</span>`;
+  else if (score === minScore) badge = `<span style="color:#4BCFFA">🎯 가장 낮은 점수 (확률 40%)</span>`;
+
+  document.getElementById('resultArea').innerHTML = `
+    <div class="result-card">
+      <div class="result-emoji">${EMOJIS[winner]}</div>
+      <div class="result-score">${score}점 당첨!</div>
+      <div class="result-sub">
+        ${badge ? badge + ' &nbsp;·&nbsp; ' : ''}당첨 확률 <b>${(probs[winner]*100).toFixed(1)}%</b>
+      </div>
+    </div>
+  `;
+
+  /* Highlight winning cell */
+  const cells  = document.querySelectorAll('.prob-cell');
+  const sorted = scores.map((s,i) => ({s,i})).sort((a,b) => b.s - a.s);
+  const wi     = sorted.findIndex(x => x.i === winner);
+  if (cells[wi]) {
+    cells.forEach(c => { c.style.background = 'rgba(255,255,255,0.06)'; });
+    const [r,g,b] = hexRgb(SEG_COLORS[winner]);
+    cells[wi].style.background = `rgba(${r},${g},${b},0.28)`;
+    cells[wi].classList.remove('highlight');
+    void cells[wi].offsetWidth; // force reflow
+    cells[wi].classList.add('highlight');
+  }
+}
+
+/* ─── Board & Grid ──────────────────────────────────────── */
+function updateBoard() {
+  document.getElementById('totalScore').textContent = totalScore;
+  document.getElementById('spinCount').textContent  = spinCount;
+  document.getElementById('avgScore').textContent   =
+    spinCount ? Math.round(totalScore / spinCount) : '-';
+}
+
+function buildProbGrid() {
+  const grid   = document.getElementById('probGrid');
+  grid.innerHTML = '';
+
+  const sorted = scores.map((s,i) => ({s, i, p: probs[i]})).sort((a,b) => b.s - a.s);
+
+  sorted.forEach(({s, i, p}) => {
+    const cell = document.createElement('div');
+    cell.className = 'prob-cell';
+    cell.style.borderTopColor = SEG_COLORS[i];
+    cell.innerHTML = `
+      <div class="cell-emoji">${EMOJIS[i]}</div>
+      <div class="cell-score" style="color:${SEG_COLORS[i]}">${s}점</div>
+      <div class="cell-pct">${(p * 100).toFixed(1)}%</div>
+    `;
+    grid.appendChild(cell);
+  });
+}
+
+/* ─── Events ────────────────────────────────────────────── */
+document.getElementById('spinBtn').addEventListener('click', spin);
+document.getElementById('newBtn').addEventListener('click',  () => { if (!isSpinning) init(); });
+
+/* ─── Start ─────────────────────────────────────────────── */
+init();
+</script>
+</body>
+</html>
