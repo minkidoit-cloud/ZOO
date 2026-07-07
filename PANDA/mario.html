@@ -282,47 +282,63 @@
   bindHold(document.getElementById('t-right'), () => keys.right = true, () => keys.right = false);
   bindHold(document.getElementById('t-jump'), () => keys.jump = true, () => { keys.jump = false; keys.jumpHeld = false; });
 
+  // 16-wide pixel-art sprite (values map to PALETTE below)
   const PALETTE = {
-    '1': '#b9c0c9', '2': '#7f8794', '3': '#2e3238',
-    '4': '#ffdfc2', '5': '#2fb6e0', '6': '#3fd0c5',
-    '7': '#232b45', '8': '#141a2e', '9': '#17171a',
-    'a': '#f2f2f2', 'b': '#232323', 'c': '#57c84d', 'd': '#ffe066'
+    'o': '#14121c', // outline
+    'H': '#e2e6ee', // hair light
+    'h': '#a9b3c2', // hair shadow
+    'p': '#f2a9c4', // cat-ear pink
+    'P': '#f6a6bb', // cheek blush
+    's': '#ffe1c6', // skin
+    'e': '#37b0ea', // eye blue
+    'E': '#1d2b46', // eyelash / eye outline
+    'j': '#29324f', // jacket
+    'J': '#171d33', // jacket / pleat shadow
+    't': '#64d9ce', // scarf
+    'T': '#38a69c', // scarf shadow
+    'y': '#ffd94f', // ID badge
+    'd': '#1b2138', // skirt
+    'w': '#f1f2f4', // sock
+    'b': '#23272f', // left shoe (dark)
+    'g': '#7cc94e', // right shoe (green)
   };
 
-  function frame(legOffsetL, legOffsetR) {
-    return [
-      '..2....2..',
-      '.111111111',
-      '1111111111',
-      '1111111111',
-      '1145445411',
-      '1444444441',
-      '1666666661',
-      '6666666666',
-      '7777777777',
-      '7777d77777',
-      '7777777777',
-      '9999999999',
-      '9999999999',
-      shiftRow('..aa..aa..', legOffsetL, legOffsetR),
-      shiftRow('..aa..aa..', legOffsetL, legOffsetR),
-      shiftRow('..bb..cc..', legOffsetL, legOffsetR),
-    ];
-  }
-  function shiftRow(row, offL, offR) {
-    const chars = row.split('');
-    const out = ['.', '.', '.', '.', '.', '.', '.', '.', '.', '.'];
-    const put = (i, ch) => { if (i >= 0 && i < 10) out[i] = ch; };
-    put(2 + offL, chars[2]); put(3 + offL, chars[3]);
-    put(6 + offR, chars[6]); put(7 + offR, chars[7]);
-    return out.join('');
-  }
-
+  // Shared upper body (rows 0-20). Legs (rows 21-24) swapped per animation frame.
+  const SPRITE_TOP = [
+    '...ooo....ooo...',
+    '..oHpho..ohpHo..',
+    '.oHHHhhhhHHHHhho',
+    'oHHhhHHHHHHHHhHo',
+    'oHhhHsssssssHhHo',
+    'oHhHssssssssHhHo',
+    'oHhHsEEssEEsHhHo',
+    'oHhHseesseesHhHo',
+    'oHhHsPssssPsHhHo',
+    'oHhHsssssshHho..'.padEnd(16, '.').slice(0, 16),
+    '..otttttttttto..',
+    '.oTttttttttttTo.',
+    '.jjTttttttttTjj.',
+    '.jjjtttyttttjjj.',
+    '.jjjjttttttjjjj.',
+    '.jjjjjttttjjjjj.',
+    '.jjjjjjttjjjjjj.',
+    '.JjjjjjjjjjjjjJ.',
+    '.dddddddddddddd.',
+    'dddJdddJdddJdddd',
+    'dddddddddddddddd',
+  ];
+  const SPRITE_LEGS = {
+    stand: ['...ww....ww....', '...ww....ww....', '...ww....ww....', '..bbbb..gggb...'],
+    runA:  ['...ww....ww....', '...ww....ww....', '..ww.....ww....', '.bbbb...gggb...'],
+    runB:  ['...ww....ww....', '...ww....ww....', '...ww.....ww...', '..bbbb...gggb..'],
+    jump:  ['...ww....ww....', '..ww......ww...', '..ww......ww...', '.bbbb....gggb..'],
+  };
+  const buildFrame = (legs) => SPRITE_TOP.concat(legs.map(r => r.padEnd(16, '.').slice(0, 16)));
   const SPRITES = {
-    stand: frame(0, 0),
-    run1: frame(-1, 1),
-    run2: frame(1, -1),
-    jump: frame(0, 0),
+    stand: buildFrame(SPRITE_LEGS.stand),
+    run1: buildFrame(SPRITE_LEGS.runA),
+    run2: buildFrame(SPRITE_LEGS.runB),
+    jump: buildFrame(SPRITE_LEGS.jump),
   };
 
   function drawSprite(rows, x, y, w, h, facing) {
@@ -731,14 +747,42 @@
     }
   }
 
+  function drawHalo(cx, cy) {
+    const t = performance.now() / 400;
+    const y = cy + Math.sin(t) * 2;
+    ctx.save();
+    ctx.strokeStyle = '#5fd6ff';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#5fd6ff';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.ellipse(cx, y, 15, 5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, y - 10); ctx.lineTo(cx, y - 5);
+    ctx.moveTo(cx, y + 5); ctx.lineTo(cx, y + 10);
+    ctx.moveTo(cx - 20, y); ctx.lineTo(cx - 14, y);
+    ctx.moveTo(cx + 14, y); ctx.lineTo(cx + 20, y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawPlayer() {
+    const sh = player.h;
+    const sw = sh * 16 / 25;
+    const screenX = player.x - camX + (player.w - sw) / 2;
+    const screenY = player.y + player.h - sh;
+    const cx = player.x - camX + player.w / 2;
+
+    drawHalo(cx, player.y - 4);
+
     if (player.invuln > 0 && Math.floor(player.invuln / 4) % 2 === 0) return;
     let sprite;
     if (!player.grounded) sprite = SPRITES.jump;
     else if (Math.abs(player.vx) > 0.3) {
       sprite = (Math.floor(player.animTimer / 8) % 2 === 0) ? SPRITES.run1 : SPRITES.run2;
     } else sprite = SPRITES.stand;
-    drawSprite(sprite, player.x - camX, player.y, player.w, player.h, player.facing);
+    drawSprite(sprite, screenX, screenY, sw, sh, player.facing);
   }
 
   function drawPopups() {
