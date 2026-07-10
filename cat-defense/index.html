@@ -388,7 +388,7 @@
     const n = state.wave;
     const giant = (n % 5 === 0);
     state.giant = giant;
-    let count = Math.round((10 + n*2) * 1.3);  // 떼거리 +30%: 1웨이브 ~16마리
+    let count = Math.round((10 + n*2) * 1.82);  // 떼거리: 기존 대비 +40% (1웨이브 ~22마리)
     if(giant) count = Math.round(count*2.2);
     const q = [];
     for(let i=0;i<count;i++){
