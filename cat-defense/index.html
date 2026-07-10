@@ -418,7 +418,7 @@
     if(state.spawnQueue.length>0){
       state.spawnTimer -= dt;
       if(state.spawnTimer<=0){
-        const s = 1 + 0.05*(state.wave-1);
+        const s = 0.5 + 0.05*(state.wave-1);   // 기본 절반, 웨이브마다 +5%p
         for(let b=0; b<state.spawnBatch && state.spawnQueue.length>0; b++){
           const key = state.spawnQueue.shift();
           const e = makeUnit('enemy', key);
@@ -837,30 +837,42 @@
     ctx.moveTo(r*0.5,-r*0.8); ctx.lineTo(r*0.2,-r*0.1); ctx.stroke();
   }
 
-  // 근접 공격 모션 (호출 시 이미 unit 중심으로 translate 된 상태)
-  function drawMeleeFX(u){
-    const p = 1 - u.animT/u.animDur;   // 0 → 1
+  // 근접 무기: 이동 중에도 상시 표시, 공격 시 슬래시/찌르기 (unit 중심 translate 상태에서 호출)
+  function drawWeapon(u){
+    const catTeam = u.team==='cat';
+    const facing = catTeam ? -Math.PI/2 : Math.PI/2;   // 아군은 위, 적은 아래를 향함
+    const attacking = u.animT>0;
+    const t = performance.now()/1000;
+    const sway = Math.sin(t*5 + u.x*0.1)*0.18;          // 이동 중 무기 흔들림
+    const ang = attacking ? u.animAng : facing + sway;
+    const p = attacking ? (1 - u.animT/u.animDur) : 0;
+    const spear = (u.key==='dps');
     ctx.save();
-    ctx.rotate(u.animAng);             // 로컬 +x 축이 적을 향함
-    if(u.key==='tank'){
-      // 칼 휘두르기: 앞쪽에서 호를 그리며 스윙
-      const R = u.r*1.5;
-      const a = -1.0 + p*2.0;          // 스윙 각도
-      ctx.globalAlpha = 1 - p*0.5;
-      ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=4; ctx.lineCap='round';
-      ctx.beginPath(); ctx.arc(0,0,R, a-0.55, a+0.55); ctx.stroke();
-      ctx.strokeStyle='rgba(150,220,255,0.7)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(0,0,R+3, a-0.4, a+0.4); ctx.stroke();
-      ctx.globalAlpha=1;
+    ctx.rotate(ang);
+    if(spear){
+      // 창: 평소 앞으로 들고, 공격 시 쭉 찌름
+      const ext = attacking ? Math.sin(p*Math.PI) : 0;
+      const tip = u.r*0.9 + ext*u.r*1.7;
+      ctx.strokeStyle = catTeam ? '#c9c9d4' : '#9a7f7f'; ctx.lineWidth=3; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(u.r*0.2,0); ctx.lineTo(tip,0); ctx.stroke();
+      ctx.fillStyle = catTeam ? '#ffd34e' : '#ff6a6a';
+      ctx.beginPath(); ctx.moveTo(tip+5,0); ctx.lineTo(tip-5,-4.5); ctx.lineTo(tip-5,4.5); ctx.closePath(); ctx.fill();
     } else {
-      // 창 찌르기: 앞으로 쭉 나갔다 들어옴
-      const ext = Math.sin(p*Math.PI);          // 0 → 1 → 0
-      const tip = u.r*0.5 + ext*u.r*1.9;
-      const base = u.r*0.3;
-      ctx.strokeStyle='#c9c9d4'; ctx.lineWidth=3; ctx.lineCap='round';
-      ctx.beginPath(); ctx.moveTo(base,0); ctx.lineTo(tip,0); ctx.stroke();
-      ctx.fillStyle='#ffd34e';                   // 창날
-      ctx.beginPath(); ctx.moveTo(tip+4,0); ctx.lineTo(tip-5,-4); ctx.lineTo(tip-5,4); ctx.closePath(); ctx.fill();
+      // 칼: 공격 시 앞에서 호를 그리며 스윙
+      if(attacking){
+        const R=u.r*1.5, a=-1.0+p*2.0;
+        ctx.globalAlpha=1-p*0.5;
+        ctx.strokeStyle= catTeam ? 'rgba(255,255,255,0.9)' : 'rgba(255,170,170,0.9)';
+        ctx.lineWidth=4; ctx.lineCap='round';
+        ctx.beginPath(); ctx.arc(0,0,R,a-0.55,a+0.55); ctx.stroke();
+        ctx.globalAlpha=1;
+      }
+      // 평소 들고 있는 칼날
+      const hx=u.r*0.7;
+      ctx.strokeStyle= catTeam ? '#e6ecf5' : '#caa9a9'; ctx.lineWidth=3.5; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(hx,0); ctx.lineTo(hx+u.r*0.95,0); ctx.stroke();
+      ctx.strokeStyle= catTeam ? '#8a6a3a' : '#6a4a4a'; ctx.lineWidth=2;  // 가드
+      ctx.beginPath(); ctx.moveTo(hx,-3.5); ctx.lineTo(hx,3.5); ctx.stroke();
     }
     ctx.restore();
   }
@@ -876,10 +888,10 @@
       (CAT_DRAW[u.key]||drawDog)(u.r);
       if(u.hit>0){ ctx.globalAlpha=0.4; ctx.fillStyle='#fff';
         ctx.beginPath(); ctx.arc(0,0,u.r*1.05,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
-      if(u.animT>0 && (u.key==='tank'||u.key==='dps')) drawMeleeFX(u);
     } else {
       drawEnemyCat(u);
     }
+    if(u.kind==='melee') drawWeapon(u);   // 근접 유닛은 이동 중에도 무기 상시 표시
     ctx.restore();
 
     // HP bar
