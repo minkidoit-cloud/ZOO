@@ -262,13 +262,13 @@
 
   const CAT_TYPES = {
     tank:   {name:'블루', role:'전사',  emoji:'🐶', color:'#6ec6e8', cost:25, cd:1.2,
-             hp:240, atk:14, atkInt:1.0, range:34, speed:26, kind:'melee'},
+             hp:240, atk:14, atkInt:1.0, range:34, speed:18, kind:'melee'},
     archer: {name:'루시', role:'궁수',  emoji:'🐱', color:'#b9b9c0', cost:40, cd:2.0,
-             hp:80,  atk:16, atkInt:1.1, range:150, speed:30, kind:'ranged'},
+             hp:40,  atk:16, atkInt:0.5, range:150, speed:30, kind:'ranged'},
     dps:    {name:'몽이', role:'딜러',  emoji:'🐵', color:'#8a5a3b', cost:35, cd:1.6,
-             hp:110, atk:34, atkInt:0.7, range:36, speed:40, kind:'melee'},
+             hp:70,  atk:44, atkInt:0.7, range:36, speed:60, kind:'melee'},
     heal:   {name:'애니', role:'힐러',  emoji:'🐰', color:'#f7e3ea', cost:55, cd:4.0,
-             hp:95,  atk:0,  atkInt:1.0, range:130, speed:26, kind:'heal', healAmt:10},
+             hp:95,  atk:0,  atkInt:1.0, range:130, speed:26, kind:'heal', healAmt:8},
   };
 
   const ENEMY_TYPES = {
@@ -464,18 +464,23 @@
       if(u.hit>0) u.hit-=dt;
       if(u.retreat>0) u.retreat-=dt;
 
-      // ---- HEALER: 아군 회복 (아군 팀 기준) ----
+      // ---- HEALER: 힐 오라(범위) 안의 아군을 지속 회복 ----
       if(u.kind==='heal'){
-        const target = lowestAllyInRange(u);
-        if(target && u.cd<=0){
-          const amt=u.healAmt;
-          target.hp=Math.min(target.maxHp, target.hp+amt);
-          u.cd=u.atkInt;
-          addFloater(target.x, target.y-16, '+'+amt, '#57e39b', -20);
+        if(u.cd<=0){
+          let healed=false;
+          for(const o of units){
+            if(o.dead || o.team!==u.team || o===u) continue;
+            if(o.hp>=o.maxHp) continue;
+            if(dist(u,o) > u.range) continue;
+            o.hp=Math.min(o.maxHp, o.hp+u.healAmt);
+            healed=true;
+          }
+          u.cd = u.atkInt;
+          if(healed) addFloater(u.x, u.y-u.r-8, '힐 +'+u.healAmt, '#57e39b', -16);
         }
         if(u.team==='cat'){
           const front = frontCatY();
-          if(u.y > front+60) u.y -= u.speed*dt;      // 아군 힐러: 전선 뒤 따라감
+          if(u.y > front+70) u.y -= u.speed*dt;      // 아군 힐러: 전선 뒤 따라감
         } else {
           if(u.y < baseY()-u.r-50) u.y += u.speed*dt; // 적 힐러: 뒤따라 내려옴
         }
@@ -622,12 +627,33 @@
   function draw(){
     ctx.clearRect(0,0,W,H);
     drawField();
+    drawAuras();
     // draw units back-to-front by y
     const sorted = units.slice().sort((a,b)=>a.y-b.y);
     for(const u of sorted) drawUnit(u);
     drawEffects();
     drawBase();
     drawFloaters();
+  }
+
+  // 힐러의 회복 범위 오라
+  function drawAuras(){
+    const t = performance.now()/1000;
+    for(const u of units){
+      if(u.dead || u.kind!=='heal') continue;
+      const ally = u.team==='cat';
+      const pulse = 0.5 + 0.5*Math.sin(t*2.5);
+      ctx.save();
+      ctx.beginPath(); ctx.arc(u.x, u.y, u.range, 0, Math.PI*2);
+      ctx.fillStyle = ally ? 'rgba(87,227,155,0.08)' : 'rgba(255,120,120,0.07)';
+      ctx.fill();
+      ctx.strokeStyle = ally
+        ? 'rgba(87,227,155,'+(0.25+0.2*pulse)+')'
+        : 'rgba(255,120,120,'+(0.22+0.18*pulse)+')';
+      ctx.lineWidth=1.5; ctx.setLineDash([6,6]);
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
+    }
   }
 
   function drawField(){
