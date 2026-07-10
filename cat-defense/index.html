@@ -462,6 +462,7 @@
       if(u.dead) continue;
       u.cd = Math.max(0, u.cd-dt);
       if(u.hit>0) u.hit-=dt;
+      if(u.animT>0) u.animT-=dt;
       if(u.retreat>0) u.retreat-=dt;
 
       // ---- HEALER: 힐 오라(범위) 안의 아군을 지속 회복 ----
@@ -551,6 +552,11 @@
   function attack(u, tgt){
     const dmg = Math.round(u.atk * (u.team==='cat'? state.atkMul : 1));
     tgt.hp -= dmg; tgt.hit=0.12; u.hit=0.10;
+    if(u.kind==='melee'){
+      u.animAng = Math.atan2(tgt.y-u.y, tgt.x-u.x);
+      u.animDur = (u.key==='dps') ? 0.28 : 0.26;
+      u.animT = u.animDur;
+    }
     if(u.kind==='ranged') effects.push({type:'shot', x:u.x, y:u.y, tx:tgt.x, ty:tgt.y, t:0, life:0.18, team:u.team});
     if(tgt.hp<=0){ tgt.dead=true; }
   }
@@ -652,6 +658,16 @@
         : 'rgba(255,120,120,'+(0.22+0.18*pulse)+')';
       ctx.lineWidth=1.5; ctx.setLineDash([6,6]);
       ctx.stroke(); ctx.setLineDash([]);
+      // 레이더 스윕: 도는 선 + 잔상 섹터
+      const ang = (t*1.8) % (Math.PI*2);
+      ctx.translate(u.x, u.y);
+      ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.arc(0,0,u.range, ang-0.6, ang); ctx.closePath();
+      ctx.fillStyle = ally ? 'rgba(87,227,155,0.16)' : 'rgba(255,120,120,0.14)';
+      ctx.fill();
+      ctx.strokeStyle = ally ? 'rgba(120,255,190,0.8)' : 'rgba(255,150,150,0.8)';
+      ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,0);
+      ctx.lineTo(Math.cos(ang)*u.range, Math.sin(ang)*u.range); ctx.stroke();
       ctx.restore();
     }
   }
@@ -821,6 +837,34 @@
     ctx.moveTo(r*0.5,-r*0.8); ctx.lineTo(r*0.2,-r*0.1); ctx.stroke();
   }
 
+  // 근접 공격 모션 (호출 시 이미 unit 중심으로 translate 된 상태)
+  function drawMeleeFX(u){
+    const p = 1 - u.animT/u.animDur;   // 0 → 1
+    ctx.save();
+    ctx.rotate(u.animAng);             // 로컬 +x 축이 적을 향함
+    if(u.key==='tank'){
+      // 칼 휘두르기: 앞쪽에서 호를 그리며 스윙
+      const R = u.r*1.5;
+      const a = -1.0 + p*2.0;          // 스윙 각도
+      ctx.globalAlpha = 1 - p*0.5;
+      ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=4; ctx.lineCap='round';
+      ctx.beginPath(); ctx.arc(0,0,R, a-0.55, a+0.55); ctx.stroke();
+      ctx.strokeStyle='rgba(150,220,255,0.7)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(0,0,R+3, a-0.4, a+0.4); ctx.stroke();
+      ctx.globalAlpha=1;
+    } else {
+      // 창 찌르기: 앞으로 쭉 나갔다 들어옴
+      const ext = Math.sin(p*Math.PI);          // 0 → 1 → 0
+      const tip = u.r*0.5 + ext*u.r*1.9;
+      const base = u.r*0.3;
+      ctx.strokeStyle='#c9c9d4'; ctx.lineWidth=3; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(base,0); ctx.lineTo(tip,0); ctx.stroke();
+      ctx.fillStyle='#ffd34e';                   // 창날
+      ctx.beginPath(); ctx.moveTo(tip+4,0); ctx.lineTo(tip-5,-4); ctx.lineTo(tip-5,4); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function drawUnit(u){
     ctx.save();
     ctx.translate(u.x,u.y);
@@ -832,6 +876,7 @@
       (CAT_DRAW[u.key]||drawDog)(u.r);
       if(u.hit>0){ ctx.globalAlpha=0.4; ctx.fillStyle='#fff';
         ctx.beginPath(); ctx.arc(0,0,u.r*1.05,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
+      if(u.animT>0 && (u.key==='tank'||u.key==='dps')) drawMeleeFX(u);
     } else {
       drawEnemyCat(u);
     }
