@@ -318,6 +318,7 @@
   const SUMMON_COUNT = 2;               // 소환 1회당 나오는 마리 수
   const CAT_POWER = 1 / SUMMON_COUNT;   // 개체 스탯 = 원래/마리수 → 총 전력은 동일
   const CAT_NERF = 0.8;                 // 우리 편 화력 20% 하향(밸런스)
+  const ENEMY_ATK_MUL = 1.3;            // 적 공격력 30% 상향(밸런스)
 
   function makeUnit(team, key){
     const t = team==='cat' ? CAT_TYPES[key] : ENEMY_TYPES[key];
@@ -426,7 +427,7 @@
           const key = state.spawnQueue.shift();
           const e = makeUnit('enemy', key);
           e.maxHp = Math.round(e.maxHp*s); e.hp=e.maxHp;
-          e.atk = Math.max(1, Math.round(e.atk*s));   // 공격력도 30%에서 시작해 상승
+          e.atk = Math.max(1, Math.round(e.atk*s*ENEMY_ATK_MUL));   // 30%에서 시작해 상승, 전체 +30%
           units.push(e);
         }
         state.spawnTimer = Math.max(0.22, 0.5 - state.wave*0.015);
