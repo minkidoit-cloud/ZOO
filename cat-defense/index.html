@@ -210,13 +210,13 @@
   const LANE_PAD = 34;
 
   const CAT_TYPES = {
-    tank:   {name:'초록곰', role:'전사',  emoji:'🐻', color:'#9ccf5f', cost:25, cd:1.2,
+    tank:   {name:'블루', role:'전사',  emoji:'🐶', color:'#6ec6e8', cost:25, cd:1.2,
              hp:240, atk:14, atkInt:1.0, range:34, speed:26, kind:'melee'},
-    archer: {name:'원숭이', role:'궁수',  emoji:'🐵', color:'#8a5a3b', cost:40, cd:2.0,
+    archer: {name:'아리', role:'궁수',  emoji:'🐱', color:'#b9b9c0', cost:40, cd:2.0,
              hp:80,  atk:16, atkInt:1.1, range:150, speed:30, kind:'ranged'},
-    dps:    {name:'강아지', role:'딜러',  emoji:'🐶', color:'#6ec6e8', cost:35, cd:1.6,
+    dps:    {name:'몽이', role:'딜러',  emoji:'🐵', color:'#8a5a3b', cost:35, cd:1.6,
              hp:110, atk:34, atkInt:0.7, range:36, speed:40, kind:'melee'},
-    heal:   {name:'토끼',   role:'힐러',  emoji:'🐰', color:'#f7e3ea', cost:55, cd:4.0,
+    heal:   {name:'애니', role:'힐러',  emoji:'🐰', color:'#f7e3ea', cost:55, cd:4.0,
              hp:95,  atk:0,  atkInt:1.0, range:130, speed:26, kind:'heal', healAmt:10},
   };
 
@@ -568,20 +568,42 @@
     ctx.ellipse(sp,dy,r*0.22,r*0.14,0,0,Math.PI*2); ctx.fill();
   }
 
-  function drawBear(r){
-    const body='#9ccf5f', inner='#eaf5cf', line='rgba(80,110,40,0.45)';
+  function drawGrayCat(r){
+    const body='#b9b9c0', dark='#8f8f98', line='rgba(90,90,100,0.45)';
     ctx.strokeStyle=line; ctx.lineWidth=1.5; ctx.fillStyle=body;
-    ctx.beginPath(); ctx.arc(-r*0.6,-r*0.72,r*0.42,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.arc(r*0.6,-r*0.72,r*0.42,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=inner;
-    ctx.beginPath(); ctx.arc(-r*0.6,-r*0.7,r*0.22,0,Math.PI*2); ctx.arc(r*0.6,-r*0.7,r*0.22,0,Math.PI*2); ctx.fill();
+    // cat ears (triangles)
+    ctx.beginPath();
+    ctx.moveTo(-r*0.75,-r*0.5); ctx.lineTo(-r*0.95,-r*1.2); ctx.lineTo(-r*0.28,-r*0.78); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(r*0.75,-r*0.5); ctx.lineTo(r*0.95,-r*1.2); ctx.lineTo(r*0.28,-r*0.78); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // inner ears (pink)
+    ctx.fillStyle='#e8b7c2';
+    ctx.beginPath(); ctx.moveTo(-r*0.68,-r*0.56); ctx.lineTo(-r*0.84,-r*1.02); ctx.lineTo(-r*0.42,-r*0.74); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(r*0.68,-r*0.56); ctx.lineTo(r*0.84,-r*1.02); ctx.lineTo(r*0.42,-r*0.74); ctx.closePath(); ctx.fill();
+    // head
     ctx.fillStyle=body; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#eef6d8'; ctx.beginPath(); ctx.ellipse(0,r*0.3,r*0.44,r*0.32,0,0,Math.PI*2); ctx.fill();
-    blush(r, r*0.18, r*0.62, 'rgba(120,180,70,0.4)');
-    eyes(r, -r*0.05, r*0.42, r*0.16);
-    ctx.fillStyle='#5a7a30'; ctx.beginPath(); ctx.arc(0,r*0.18,r*0.1,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='#5a7a30'; ctx.lineWidth=1.5; ctx.beginPath();
+    // tabby stripes on forehead
+    ctx.strokeStyle=dark; ctx.lineWidth=2; ctx.lineCap='round'; ctx.beginPath();
+    ctx.moveTo(0,-r*0.92); ctx.lineTo(0,-r*0.5);
+    ctx.moveTo(-r*0.24,-r*0.85); ctx.lineTo(-r*0.19,-r*0.55);
+    ctx.moveTo(r*0.24,-r*0.85); ctx.lineTo(r*0.19,-r*0.55); ctx.stroke(); ctx.lineCap='butt';
+    // muzzle
+    ctx.fillStyle='#e8e5ea'; ctx.beginPath(); ctx.ellipse(0,r*0.34,r*0.5,r*0.32,0,0,Math.PI*2); ctx.fill();
+    eyes(r, -r*0.02, r*0.4, r*0.16);
+    blush(r, r*0.3, r*0.62, 'rgba(200,150,160,0.4)');
+    // nose (pink triangle)
+    ctx.fillStyle='#e79aa8'; ctx.beginPath();
+    ctx.moveTo(0,r*0.28); ctx.lineTo(-r*0.08,r*0.2); ctx.lineTo(r*0.08,r*0.2); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#8f8f98'; ctx.lineWidth=1.3; ctx.beginPath();
     ctx.moveTo(0,r*0.28); ctx.lineTo(0,r*0.36); ctx.stroke();
+    // whiskers
+    ctx.strokeStyle='rgba(120,120,130,0.5)'; ctx.lineWidth=1; ctx.beginPath();
+    ctx.moveTo(-r*0.42,r*0.3); ctx.lineTo(-r*0.98,r*0.22);
+    ctx.moveTo(-r*0.42,r*0.4); ctx.lineTo(-r*0.94,r*0.44);
+    ctx.moveTo(r*0.42,r*0.3); ctx.lineTo(r*0.98,r*0.22);
+    ctx.moveTo(r*0.42,r*0.4); ctx.lineTo(r*0.94,r*0.44); ctx.stroke();
   }
   function drawMonkey(r){
     const fur='#8a5a3b', face='#f0d6b0', line='rgba(70,40,20,0.45)';
@@ -638,7 +660,7 @@
     blush(r, r*0.36, r*0.55);
     ctx.fillStyle='#e79aa8'; ctx.beginPath(); ctx.arc(0,r*0.44,r*0.07,0,Math.PI*2); ctx.fill();
   }
-  const CAT_DRAW = {tank:drawBear, archer:drawMonkey, dps:drawDog, heal:drawBunny};
+  const CAT_DRAW = {tank:drawDog, archer:drawGrayCat, dps:drawMonkey, heal:drawBunny};
 
   function drawEnemyCat(u){
     const r=u.r, hit=u.hit>0;
@@ -666,7 +688,7 @@
     ctx.ellipse(0,u.r*0.95,u.r*0.9,u.r*0.35,0,0,Math.PI*2); ctx.fill();
 
     if(u.team==='cat'){
-      (CAT_DRAW[u.key]||drawBear)(u.r);
+      (CAT_DRAW[u.key]||drawDog)(u.r);
       if(u.hit>0){ ctx.globalAlpha=0.4; ctx.fillStyle='#fff';
         ctx.beginPath(); ctx.arc(0,0,u.r*1.05,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
     } else {
