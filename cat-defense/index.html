@@ -48,7 +48,7 @@
         <div class="overlay-card">
           <canvas id="heroArt" class="hero-art"></canvas>
           <h2 id="overlayTitle">애니팡 1000점!</h2>
-          <p id="overlaySub">프렌즈를 소환해 길냥이 갱단을 처치! <b>1000점 먼저 달성</b>하면 클리어.<br>적은 <b>5초마다 대포</b>로 기지에 30 피해 — <b>기지 회복</b> 아이템으로 수리하세요!<br>얼마나 빨리 깨는지 <b>타임 어택</b>에 도전!</p>
+          <p id="overlaySub">프렌즈를 소환해 길냥이 갱단을 처치! <b>1000점 먼저 달성</b>하면 클리어.<br>적은 <b>5초마다 대포</b>로 기지를 포격(웨이브마다 강해짐) — <b>기지 회복</b> 아이템으로 수리하세요!<br>얼마나 빨리 깨는지 <b>타임 어택</b>에 도전!</p>
           <div class="best" id="bestLine">아직 기록 없음</div>
           <button class="start-btn" id="startBtn">전투 시작</button>
         </div>
@@ -588,7 +588,7 @@
     const sy = src ? src.y : spawnY()-14;
     const tx = W*0.28 + Math.random()*W*0.44;
     const ty = baseY() + (H-baseY())*0.35;
-    const dmg = 30;
+    const dmg = 20 + Math.max(0, state.wave-1)*5;   // 20부터 웨이브마다 +5
     effects.push({type:'cannon', x:sx, y:sy, tx, ty, t:0, life:0.85, dmg});
   }
   function cannonImpact(e){
