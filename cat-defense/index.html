@@ -210,13 +210,13 @@
   const LANE_PAD = 34;
 
   const CAT_TYPES = {
-    tank:   {name:'초록곰', role:'전사',  emoji:'🐻', color:'#9ccf5f', cost:40, cd:3.0,
+    tank:   {name:'초록곰', role:'전사',  emoji:'🐻', color:'#9ccf5f', cost:25, cd:1.2,
              hp:240, atk:14, atkInt:1.0, range:34, speed:26, kind:'melee'},
-    archer: {name:'원숭이', role:'궁수',  emoji:'🐵', color:'#8a5a3b', cost:60, cd:4.5,
+    archer: {name:'원숭이', role:'궁수',  emoji:'🐵', color:'#8a5a3b', cost:40, cd:2.0,
              hp:80,  atk:16, atkInt:1.1, range:150, speed:30, kind:'ranged'},
-    dps:    {name:'강아지', role:'딜러',  emoji:'🐶', color:'#6ec6e8', cost:50, cd:5.0,
+    dps:    {name:'강아지', role:'딜러',  emoji:'🐶', color:'#6ec6e8', cost:35, cd:1.6,
              hp:110, atk:34, atkInt:0.7, range:36, speed:40, kind:'melee'},
-    heal:   {name:'토끼',   role:'힐러',  emoji:'🐰', color:'#f7e3ea', cost:70, cd:8.0,
+    heal:   {name:'토끼',   role:'힐러',  emoji:'🐰', color:'#f7e3ea', cost:55, cd:4.0,
              hp:95,  atk:0,  atkInt:1.0, range:130, speed:26, kind:'heal', healAmt:10},
   };
 
@@ -238,7 +238,7 @@
 
   function newState(){
     return {
-      gold:120, score:0, wave:0, baseHp:100, baseMax:100,
+      gold:150, score:0, wave:0, baseHp:120, baseMax:120,
       atkMul:1.0,                 // rod buff
       goldTimer:0,
       spawnQueue:[], spawnTimer:0, waveActive:false, waveBreak:2.0, enemiesLeft:0,
@@ -319,45 +319,52 @@
   function startWave(){
     state.wave++;
     const n = state.wave;
-    const count = 4 + Math.floor(n*1.8);
+    const giant = (n % 5 === 0);
+    state.giant = giant;
+    let count = 10 + n*2;              // 떼거리: 1웨이브부터 12마리
+    if(giant) count = Math.round(count*2.2);
     const q = [];
     for(let i=0;i<count;i++){
       let key='brown';
       const roll=Math.random();
-      if(n>=2 && roll<0.30) key='black';
-      else if(n>=3 && roll>=0.30 && roll<0.55) key='yellow';
-      // later waves heavier mix
-      if(n>=5 && roll>0.8) key = Math.random()<0.5?'black':'yellow';
+      if(n>=2 && roll<0.32) key='black';
+      else if(n>=3 && roll<0.55) key='yellow';
       q.push(key);
     }
     state.spawnQueue = q;
     state.enemiesLeft = q.length;
-    state.spawnTimer = 0.4;
+    state.spawnTimer = 0.3;
+    state.spawnBatch = giant ? 4 : 2;  // 한 번에 여러 마리 동시 등장
     state.waveActive = true;
-    banner('WAVE '+n+' · 적 '+q.length+'마리');
+    banner((giant?'⚠ 거대 웨이브 '+n:'WAVE '+n)+' · 적 '+q.length+'마리');
   }
 
   function updateWaves(dt){
     if(!state.waveActive){
       state.waveBreak -= dt;
-      if(state.waveBreak<=0){ startWave(); }
+      // 다음 웨이브가 거대 웨이브면 미리 경고
+      if(!state._warned && state.waveBreak<1.3 && ((state.wave+1)%5===0)){
+        state._warned=true; banner('⚠ 거대 웨이브 접근! 병력을 준비하세요');
+      }
+      if(state.waveBreak<=0){ state._warned=false; startWave(); }
       return;
     }
     if(state.spawnQueue.length>0){
       state.spawnTimer -= dt;
       if(state.spawnTimer<=0){
-        const key = state.spawnQueue.shift();
-        const e = makeUnit('enemy', key);
-        // scale with wave
-        const s = 1 + 0.07*(state.wave-1);
-        e.maxHp = Math.round(e.maxHp*s); e.hp=e.maxHp;
-        e.atk = Math.round(e.atk*(1+0.04*(state.wave-1)));
-        units.push(e);
-        state.spawnTimer = Math.max(0.5, 1.4 - state.wave*0.06);
+        const s = 1 + 0.05*(state.wave-1);
+        for(let b=0; b<state.spawnBatch && state.spawnQueue.length>0; b++){
+          const key = state.spawnQueue.shift();
+          const e = makeUnit('enemy', key);
+          e.maxHp = Math.round(e.maxHp*s); e.hp=e.maxHp;
+          e.atk = Math.round(e.atk*(1+0.035*(state.wave-1)));
+          units.push(e);
+        }
+        state.spawnTimer = Math.max(0.22, 0.5 - state.wave*0.015);
       }
     } else if(state.enemiesLeft<=0){
       state.waveActive = false;
-      state.waveBreak = 3.0;
+      state.waveBreak = 2.2;
       banner('웨이브 클리어! 잠시 정비…');
     }
   }
@@ -720,9 +727,9 @@
     if(!state.over){
       updateWaves(dt);
       updateUnits(dt);
-      // gold trickle
-      state.goldTimer += dt;
-      if(state.goldTimer>=1){ state.goldTimer-=1; state.gold += 2; }
+      // passive income — ramps up with waves, keeps stacking even while idle
+      const income = 6 + state.wave*1.3;
+      state.gold += income*dt;
       // cooldowns
       for(const k in cds){ if(cds[k]>0) cds[k]=Math.max(0,cds[k]-dt); }
     }
