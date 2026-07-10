@@ -1,0 +1,735 @@
+<div id="app">
+  <div class="shell" id="shell">
+
+    <!-- ===== HUD ===== -->
+    <header class="hud">
+      <div class="hud-title">
+        <span class="paw">🐾</span>
+        <div>
+          <h1>냥냥 갱워</h1>
+          <p>집사의 기지 방어전 · 프로토타입</p>
+        </div>
+      </div>
+      <div class="hud-stats">
+        <div class="stat gold">
+          <span class="stat-label">골드</span>
+          <span class="stat-value" id="uiGold">0</span>
+        </div>
+        <div class="stat score">
+          <span class="stat-label">점수</span>
+          <span class="stat-value" id="uiScore">0</span>
+        </div>
+        <div class="stat wave">
+          <span class="stat-label">웨이브</span>
+          <span class="stat-value" id="uiWave">1</span>
+        </div>
+      </div>
+      <div class="base-hp">
+        <div class="base-hp-top">
+          <span>🏠 기지 HP</span>
+          <span id="uiBaseHpText">100 / 100</span>
+        </div>
+        <div class="bar"><div class="bar-fill" id="uiBaseHp"></div></div>
+      </div>
+    </header>
+
+    <!-- ===== FIELD ===== -->
+    <div class="field-wrap">
+      <canvas id="field"></canvas>
+      <div class="banner" id="waveBanner"></div>
+      <div class="overlay" id="overlay">
+        <div class="overlay-card">
+          <div class="overlay-emoji">🐱‍👤</div>
+          <h2 id="overlayTitle">냥냥 갱워</h2>
+          <p id="overlaySub">위에서 흉터난 길냥이 갱단이 내려옵니다.<br>고양이 부대를 소환해 기지를 지키세요!</p>
+          <button class="start-btn" id="startBtn">전투 시작</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DOCK ===== -->
+    <div class="dock">
+      <div class="dock-label">고양이 소환</div>
+      <div class="btn-row" id="catRow"></div>
+      <div class="dock-label">골드 아이템</div>
+      <div class="btn-row" id="itemRow"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  :root{
+    --bg:#151021; --bg2:#1d1630; --ink:#f4eefb; --muted:#a99fc4;
+    --cat:#ff3d7f; --enemy:#e8a33d; --gold:#ffd34e; --danger:#ff4d4d;
+    --ally:#5ad1c9; --line:#2c2340; --card:#221a36;
+    --tank:#f2a65a; --archer:#f0cd5e; --dps:#8a7bd8; --heal:#f2f2fa;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  #app{
+    min-height:100%;
+    font-family:"Segoe UI",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #3a2450 0%, transparent 60%),
+      radial-gradient(900px 500px at 50% 110%, #241a3a 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    display:flex; justify-content:center; align-items:flex-start;
+    padding:16px;
+  }
+  .shell{
+    width:100%; max-width:440px;
+    background:linear-gradient(180deg,#1a1430,#140f24);
+    border:1px solid var(--line);
+    border-radius:22px; overflow:hidden;
+    box-shadow:var(--shadow);
+    display:flex; flex-direction:column;
+  }
+
+  /* HUD */
+  .hud{padding:14px 16px 12px; border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#221a38,#1a1430);}
+  .hud-title{display:flex; align-items:center; gap:10px;}
+  .hud-title .paw{font-size:26px; filter:drop-shadow(0 0 8px rgba(255,61,127,.6));}
+  .hud-title h1{margin:0; font-size:20px; letter-spacing:.5px; font-weight:800;
+    background:linear-gradient(90deg,var(--cat),#ff9ec4);
+    -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .hud-title p{margin:2px 0 0; font-size:11px; color:var(--muted); letter-spacing:.4px;}
+
+  .hud-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0 10px;}
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:7px 10px; display:flex; flex-direction:column; align-items:center;}
+  .stat-label{font-size:10px; color:var(--muted); letter-spacing:1px; text-transform:uppercase;}
+  .stat-value{font-size:19px; font-weight:800; font-variant-numeric:tabular-nums; margin-top:2px;}
+  .stat.gold .stat-value{color:var(--gold);}
+  .stat.score .stat-value{color:var(--cat);}
+  .stat.wave .stat-value{color:var(--enemy);}
+
+  .base-hp-top{display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;
+    color:var(--muted); font-variant-numeric:tabular-nums;}
+  .base-hp-top span:first-child{color:var(--ink); font-weight:600;}
+  .bar{height:12px; background:#0f0b1c; border-radius:8px; overflow:hidden;
+    border:1px solid var(--line);}
+  .bar-fill{height:100%; width:100%;
+    background:linear-gradient(90deg,#57e39b,#2fd07a);
+    transition:width .2s ease, background .3s;}
+
+  /* FIELD */
+  .field-wrap{position:relative; background:#0e0a1a;}
+  canvas#field{display:block; width:100%; touch-action:none;}
+  .banner{position:absolute; top:16px; left:50%; transform:translateX(-50%);
+    background:rgba(20,14,36,.82); border:1px solid var(--enemy);
+    color:var(--enemy); font-weight:800; letter-spacing:1px;
+    padding:6px 16px; border-radius:20px; font-size:13px;
+    opacity:0; transition:opacity .3s; pointer-events:none;
+    box-shadow:0 0 20px rgba(232,163,61,.3);}
+  .banner.show{opacity:1;}
+
+  .overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(12,8,22,.86); backdrop-filter:blur(3px); z-index:5;
+    transition:opacity .35s;}
+  .overlay.hide{opacity:0; pointer-events:none;}
+  .overlay-card{text-align:center; padding:26px; max-width:320px;}
+  .overlay-emoji{font-size:52px; margin-bottom:6px; filter:drop-shadow(0 6px 14px rgba(0,0,0,.5));}
+  .overlay-card h2{margin:6px 0; font-size:26px; font-weight:800;
+    background:linear-gradient(90deg,var(--cat),var(--enemy));
+    -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .overlay-card p{margin:8px 0 18px; color:var(--muted); font-size:13px; line-height:1.6;}
+  .start-btn{border:0; cursor:pointer; font-weight:800; font-size:15px; letter-spacing:.5px;
+    padding:13px 30px; border-radius:14px; color:#1a1430;
+    background:linear-gradient(180deg,var(--gold),#f0b429);
+    box-shadow:0 8px 20px rgba(255,211,78,.35), inset 0 1px 0 rgba(255,255,255,.5);
+    transition:transform .12s;}
+  .start-btn:hover{transform:translateY(-2px);}
+  .start-btn:active{transform:translateY(0);}
+
+  /* DOCK */
+  .dock{padding:12px 14px 16px; border-top:1px solid var(--line);
+    background:linear-gradient(180deg,#181228,#140f22);}
+  .dock-label{font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--muted); margin:2px 2px 7px;}
+  .btn-row{display:grid; gap:8px; margin-bottom:12px;}
+  #catRow{grid-template-columns:repeat(4,1fr);}
+  #itemRow{grid-template-columns:repeat(3,1fr); margin-bottom:2px;}
+
+  .gbtn{position:relative; overflow:hidden; cursor:pointer;
+    border:1px solid var(--line); border-radius:14px; padding:9px 6px 8px;
+    background:var(--card); color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    transition:transform .1s, border-color .15s, background .15s;
+    -webkit-tap-highlight-color:transparent; user-select:none;}
+  .gbtn:hover{border-color:var(--cat);}
+  .gbtn:active{transform:scale(.95);}
+  .gbtn .g-emoji{font-size:22px; line-height:1;}
+  .gbtn .g-name{font-size:11px; font-weight:700;}
+  .gbtn .g-cost{font-size:11px; font-weight:800; color:var(--gold);
+    font-variant-numeric:tabular-nums; display:flex; align-items:center; gap:2px;}
+  .gbtn .g-role{font-size:9px; color:var(--muted); letter-spacing:.3px;}
+  .gbtn.disabled{opacity:.42; cursor:not-allowed;}
+  .gbtn .cd{position:absolute; left:0; right:0; bottom:0; top:0;
+    background:rgba(10,7,18,.72); transform-origin:bottom; transform:scaleY(0);
+    pointer-events:none; display:flex; align-items:flex-end; justify-content:center;}
+  .gbtn.armed{box-shadow:0 0 0 2px var(--cat), 0 0 18px rgba(255,61,127,.5);}
+
+  @media (max-width:420px){
+    #app{padding:0;}
+    .shell{border-radius:0; max-width:none; min-height:100vh;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;}
+  }
+</style>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Canvas setup ----------
+  const canvas = document.getElementById('field');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+  const FIELD_ASPECT = 1.28; // height / width
+
+  function resize(){
+    const wrap = canvas.parentElement;
+    const cssW = wrap.clientWidth;
+    const cssH = Math.round(cssW * FIELD_ASPECT);
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.style.height = cssH + 'px';
+    canvas.width = Math.round(cssW * DPR);
+    canvas.height = Math.round(cssH * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    W = cssW; H = cssH;
+  }
+  window.addEventListener('resize', resize);
+
+  // ---------- Config ----------
+  const BASE_Y_RATIO = 0.9;         // base line position
+  const SPAWN_Y_RATIO = 0.08;       // enemy spawn line
+  const LANE_PAD = 34;
+
+  const CAT_TYPES = {
+    tank:   {name:'뚱냥이', role:'전사',  emoji:'🐈', color:'#f2a65a', cost:40, cd:3.0,
+             hp:240, atk:14, atkInt:1.0, range:34, speed:26, kind:'melee'},
+    archer: {name:'삼색이', role:'궁수',  emoji:'🐈', color:'#f0cd5e', cost:60, cd:4.5,
+             hp:80,  atk:16, atkInt:1.1, range:150, speed:30, kind:'ranged'},
+    dps:    {name:'검은냥', role:'딜러',  emoji:'🐈‍⬛', color:'#8a7bd8', cost:50, cd:5.0,
+             hp:110, atk:34, atkInt:0.7, range:36, speed:40, kind:'melee'},
+    heal:   {name:'하얀냥', role:'힐러',  emoji:'😻', color:'#f2f2fa', cost:70, cd:8.0,
+             hp:95,  atk:0,  atkInt:1.0, range:130, speed:26, kind:'heal', healAmt:10},
+  };
+
+  const ENEMY_TYPES = {
+    brown: {name:'갈색', color:'#8B5E3C', hp:110, atk:12, atkInt:1.0, range:34, speed:22, gold:14, score:10, kind:'melee'},
+    black: {name:'검정', color:'#3b3742', hp:75,  atk:11, atkInt:0.8, range:30, speed:46, gold:18, score:14, kind:'melee'},
+    yellow:{name:'노랑', color:'#c99a2e', hp:70,  atk:13, atkInt:1.2, range:140,speed:18, gold:22, score:18, kind:'ranged'},
+  };
+
+  const ITEMS = {
+    churu:{name:'츄르', emoji:'🍡', role:'전체회복', cost:50, cd:6},
+    rod:  {name:'낚싯대', emoji:'🎣', role:'공격+10%', cost:80, cd:5},
+    can:  {name:'캔간식', emoji:'🥫', role:'적 유인', cost:60, cd:9},
+  };
+
+  // ---------- Game state ----------
+  let state, units, effects, floaters;
+  let running = false, lastT = 0, animId = null;
+
+  function newState(){
+    return {
+      gold:120, score:0, wave:0, baseHp:100, baseMax:100,
+      atkMul:1.0,                 // rod buff
+      goldTimer:0,
+      spawnQueue:[], spawnTimer:0, waveActive:false, waveBreak:2.0, enemiesLeft:0,
+      over:false,
+    };
+  }
+
+  function reset(){
+    state = newState();
+    units = [];
+    effects = [];   // {type:'can', x,y,t}
+    floaters = [];  // {x,y,text,color,t,vy}
+    cds = {};       // cooldown timers per button id
+  }
+
+  // ---------- Helpers ----------
+  function baseY(){ return H * BASE_Y_RATIO; }
+  function spawnY(){ return H * SPAWN_Y_RATIO; }
+  function laneX(){ return LANE_PAD + Math.random()*(W - LANE_PAD*2); }
+  function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+  function makeUnit(team, key){
+    const t = team==='cat' ? CAT_TYPES[key] : ENEMY_TYPES[key];
+    return {
+      team, key, ...t,
+      maxHp:t.hp, hp:t.hp,
+      x: laneX(),
+      y: team==='cat' ? baseY()-6 : spawnY(),
+      cd:0, retreat:0, hit:0,
+      r: team==='cat' ? (key==='tank'?18:15) : (key==='black'?13:15),
+    };
+  }
+
+  // ---------- Spawning cats ----------
+  function trySpawnCat(key){
+    const t = CAT_TYPES[key];
+    if(state.over) return;
+    if(cds['cat_'+key] > 0) return;
+    if(state.gold < t.cost) { flashDock(); return; }
+    state.gold -= t.cost;
+    cds['cat_'+key] = t.cd;
+    const u = makeUnit('cat', key);
+    units.push(u);
+    addFloater(u.x, u.y-20, '소환!', t.color, -30);
+  }
+
+  // ---------- Items ----------
+  function useItem(key){
+    if(state.over) return;
+    const it = ITEMS[key];
+    if(cds['item_'+key] > 0) return;
+    if(state.gold < it.cost){ flashDock(); return; }
+    state.gold -= it.cost;
+    cds['item_'+key] = it.cd;
+
+    if(key==='churu'){
+      let healed=false;
+      for(const u of units){ if(u.team==='cat'){
+        const before=u.hp; u.hp=Math.min(u.maxHp, u.hp+u.maxHp*0.2);
+        if(u.hp>before){ healed=true; addFloater(u.x,u.y-16,'+'+Math.round(u.hp-before),'#57e39b',-24);} }}
+      pulse('#57e39b');
+    } else if(key==='rod'){
+      state.atkMul += 0.10;
+      addFloater(W/2, baseY()-40, '공격력 +10% (x'+state.atkMul.toFixed(1)+')', '#ff9ec4', -34);
+      pulse('#ff3d7f');
+    } else if(key==='can'){
+      // throw a can into enemy territory -> enemies retreat toward top
+      const cx = W/2 + (Math.random()*80-40);
+      const cy = H*0.28;
+      effects.push({type:'can', x:cx, y:cy, t:0, life:4.0});
+      for(const u of units){ if(u.team==='enemy'){ u.retreat = 4.0; } }
+      pulse('#ffd34e');
+    }
+  }
+
+  // ---------- Waves ----------
+  function startWave(){
+    state.wave++;
+    const n = state.wave;
+    const count = 4 + Math.floor(n*1.8);
+    const q = [];
+    for(let i=0;i<count;i++){
+      let key='brown';
+      const roll=Math.random();
+      if(n>=2 && roll<0.30) key='black';
+      else if(n>=3 && roll>=0.30 && roll<0.55) key='yellow';
+      // later waves heavier mix
+      if(n>=5 && roll>0.8) key = Math.random()<0.5?'black':'yellow';
+      q.push(key);
+    }
+    state.spawnQueue = q;
+    state.enemiesLeft = q.length;
+    state.spawnTimer = 0.4;
+    state.waveActive = true;
+    banner('WAVE '+n+' · 적 '+q.length+'마리');
+  }
+
+  function updateWaves(dt){
+    if(!state.waveActive){
+      state.waveBreak -= dt;
+      if(state.waveBreak<=0){ startWave(); }
+      return;
+    }
+    if(state.spawnQueue.length>0){
+      state.spawnTimer -= dt;
+      if(state.spawnTimer<=0){
+        const key = state.spawnQueue.shift();
+        const e = makeUnit('enemy', key);
+        // scale with wave
+        const s = 1 + 0.07*(state.wave-1);
+        e.maxHp = Math.round(e.maxHp*s); e.hp=e.maxHp;
+        e.atk = Math.round(e.atk*(1+0.04*(state.wave-1)));
+        units.push(e);
+        state.spawnTimer = Math.max(0.5, 1.4 - state.wave*0.06);
+      }
+    } else if(state.enemiesLeft<=0){
+      state.waveActive = false;
+      state.waveBreak = 3.0;
+      banner('웨이브 클리어! 잠시 정비…');
+    }
+  }
+
+  // ---------- Combat / movement ----------
+  function nearestEnemyOf(u, list){
+    let best=null, bd=Infinity;
+    for(const o of list){
+      if(o.dead) continue;
+      if(o.team===u.team) continue;
+      const d = dist(u,o);
+      if(d<bd){ bd=d; best=o; }
+    }
+    return {t:best, d:bd};
+  }
+  function lowestAllyInRange(u){
+    let best=null, bv=1;
+    for(const o of units){
+      if(o.dead || o.team!=='cat' || o===u) continue;
+      if(dist(u,o) > u.range) continue;
+      const frac=o.hp/o.maxHp;
+      if(frac<bv && frac<1){ bv=frac; best=o; }
+    }
+    return best;
+  }
+
+  function updateUnits(dt){
+    for(const u of units){
+      if(u.dead) continue;
+      u.cd = Math.max(0, u.cd-dt);
+      if(u.hit>0) u.hit-=dt;
+      if(u.retreat>0) u.retreat-=dt;
+
+      // ---- HEALER ----
+      if(u.kind==='heal'){
+        // follow up the field but hang slightly back
+        const target = lowestAllyInRange(u);
+        if(target && u.cd<=0){
+          const amt=u.healAmt;
+          target.hp=Math.min(target.maxHp, target.hp+amt);
+          u.cd=u.atkInt;
+          addFloater(target.x, target.y-16, '+'+amt, '#57e39b', -20);
+        }
+        // drift toward the front line but stay safe
+        const front = frontCatY();
+        if(u.y > front+60) u.y -= u.speed*dt;
+        keepX(u);
+        continue;
+      }
+
+      // ---- ENEMY retreat (can lure) ----
+      if(u.team==='enemy' && u.retreat>0){
+        u.y -= u.speed*1.1*dt;
+        u.y = Math.max(spawnY()-10, u.y);
+        keepX(u);
+        continue;
+      }
+
+      const {t:tgt, d} = nearestEnemyOf(u, units);
+
+      if(u.team==='cat'){
+        if(tgt && d <= u.range){
+          if(u.cd<=0){ attack(u, tgt); u.cd=u.atkInt; }
+        } else {
+          // advance upward
+          u.y -= u.speed*dt;
+          u.y = Math.max(spawnY()-4, u.y);
+        }
+      } else {
+        // enemy
+        if(tgt && d <= u.range){
+          if(u.cd<=0){ attack(u, tgt); u.cd=u.atkInt; }
+        } else if(u.y < baseY()-u.r){
+          u.y += u.speed*dt;
+        } else {
+          // attack base
+          if(u.cd<=0){
+            state.baseHp = Math.max(0, state.baseHp - u.atk);
+            u.cd=u.atkInt; u.hit=0.12;
+            addFloater(u.x, baseY()-8, '-'+u.atk, '#ff4d4d', -18);
+            if(state.baseHp<=0) gameOver();
+          }
+        }
+      }
+      keepX(u);
+    }
+
+    // cull dead
+    for(let i=units.length-1;i>=0;i--){
+      const u=units[i];
+      if(u.dead){
+        if(u.team==='enemy'){
+          state.gold += u.gold; state.score += u.score;
+          state.enemiesLeft = Math.max(0, state.enemiesLeft-1);
+          addFloater(u.x, u.y, '+'+u.gold+'G', '#ffd34e', -26);
+        }
+        units.splice(i,1);
+      }
+    }
+  }
+
+  function attack(u, tgt){
+    const dmg = Math.round(u.atk * (u.team==='cat'? state.atkMul : 1));
+    tgt.hp -= dmg; tgt.hit=0.12; u.hit=0.10;
+    if(u.kind==='ranged') effects.push({type:'shot', x:u.x, y:u.y, tx:tgt.x, ty:tgt.y, t:0, life:0.18, team:u.team});
+    if(tgt.hp<=0){ tgt.dead=true; }
+  }
+
+  function frontCatY(){
+    let y=baseY();
+    for(const u of units){ if(u.team==='cat' && u.kind!=='heal' && u.y<y) y=u.y; }
+    return y;
+  }
+  function keepX(u){ u.x = clamp(u.x, LANE_PAD, W-LANE_PAD); }
+
+  // ---------- Floaters & effects ----------
+  function addFloater(x,y,text,color,vy){ floaters.push({x,y,text,color,t:0,life:0.9,vy:vy||-24}); }
+  function updateFX(dt){
+    for(let i=floaters.length-1;i>=0;i--){ const f=floaters[i]; f.t+=dt; f.y+=f.vy*dt;
+      if(f.t>=f.life) floaters.splice(i,1); }
+    for(let i=effects.length-1;i>=0;i--){ const e=effects[i]; e.t+=dt;
+      if(e.t>=e.life) effects.splice(i,1); }
+  }
+
+  // ---------- Rendering ----------
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    drawField();
+    // draw units back-to-front by y
+    const sorted = units.slice().sort((a,b)=>a.y-b.y);
+    for(const u of sorted) drawUnit(u);
+    drawEffects();
+    drawBase();
+    drawFloaters();
+  }
+
+  function drawField(){
+    // ground gradient
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#241338'); g.addColorStop(0.5,'#170f28'); g.addColorStop(1,'#120c20');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    // perspective lane lines
+    ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1;
+    for(let i=1;i<6;i++){ const x=W*i/6; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    // enemy spawn zone glow
+    const sg=ctx.createLinearGradient(0,0,0,spawnY()+30);
+    sg.addColorStop(0,'rgba(232,163,61,0.12)'); sg.addColorStop(1,'transparent');
+    ctx.fillStyle=sg; ctx.fillRect(0,0,W,spawnY()+30);
+    // dashed midline
+    ctx.setLineDash([6,8]); ctx.strokeStyle='rgba(255,255,255,0.06)';
+    ctx.beginPath(); ctx.moveTo(0,H*0.5); ctx.lineTo(W,H*0.5); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  function drawBase(){
+    const by=baseY();
+    // base platform glow
+    const bg=ctx.createLinearGradient(0,by,0,H);
+    bg.addColorStop(0,'rgba(255,61,127,0.18)'); bg.addColorStop(1,'rgba(255,61,127,0.02)');
+    ctx.fillStyle=bg; ctx.fillRect(0,by,W,H-by);
+    ctx.strokeStyle='rgba(255,61,127,0.6)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,by); ctx.lineTo(W,by); ctx.stroke();
+    // house
+    ctx.font='26px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🏠', W*0.5, by+ (H-by)/2);
+    ctx.fillText('🐾', W*0.22, by+(H-by)/2);
+    ctx.fillText('🧶', W*0.78, by+(H-by)/2);
+  }
+
+  function drawUnit(u){
+    const hit = u.hit>0;
+    ctx.save();
+    ctx.translate(u.x,u.y);
+    // shadow
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath();
+    ctx.ellipse(0,u.r*0.9,u.r*0.9,u.r*0.35,0,0,Math.PI*2); ctx.fill();
+
+    // body circle
+    const col = hit ? '#ffffff' : u.color;
+    ctx.fillStyle=col;
+    ctx.strokeStyle = u.team==='cat' ? 'rgba(255,61,127,0.9)' : 'rgba(232,163,61,0.9)';
+    ctx.lineWidth=2;
+    // ears
+    ctx.beginPath();
+    ctx.moveTo(-u.r*0.7,-u.r*0.4); ctx.lineTo(-u.r*0.95,-u.r*1.15); ctx.lineTo(-u.r*0.2,-u.r*0.75);
+    ctx.moveTo(u.r*0.7,-u.r*0.4); ctx.lineTo(u.r*0.95,-u.r*1.15); ctx.lineTo(u.r*0.2,-u.r*0.75);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // head
+    ctx.beginPath(); ctx.arc(0,0,u.r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+    // face
+    const dir = u.team==='cat' ? -1 : 1; // cats look up, enemies look down
+    ctx.fillStyle = (u.color==='#f2f2fa'||u.color==='#f0cd5e'||u.color==='#f2a65a') ? '#2a2233' : '#ffffff';
+    // eyes
+    const ey = -u.r*0.05*dir;
+    ctx.beginPath(); ctx.arc(-u.r*0.38, ey, u.r*0.14, 0, Math.PI*2);
+    ctx.arc(u.r*0.38, ey, u.r*0.14, 0, Math.PI*2); ctx.fill();
+
+    if(u.team==='enemy'){
+      // angry brows + scar
+      ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=2; ctx.beginPath();
+      ctx.moveTo(-u.r*0.6,-u.r*0.35); ctx.lineTo(-u.r*0.18,-u.r*0.08);
+      ctx.moveTo(u.r*0.6,-u.r*0.35); ctx.lineTo(u.r*0.18,-u.r*0.08); ctx.stroke();
+      ctx.strokeStyle='rgba(255,80,80,0.8)'; ctx.beginPath();
+      ctx.moveTo(u.r*0.5,-u.r*0.8); ctx.lineTo(u.r*0.2,-u.r*0.1); ctx.stroke();
+    } else {
+      // role badge
+      const badge = {tank:'🛡',archer:'🏹',dps:'🗡',heal:'➕'}[u.key];
+      ctx.font = (u.r*0.9)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(0,0,0,0.75)';
+      ctx.fillText(badge, 0, u.r*0.55);
+    }
+    ctx.restore();
+
+    // HP bar
+    const bw=u.r*2.0, bh=4;
+    const bx=u.x-bw/2, byy=u.y-u.r-11;
+    ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(bx-1,byy-1,bw+2,bh+2);
+    ctx.fillStyle = u.team==='cat' ? '#57e39b' : '#ff6a6a';
+    ctx.fillRect(bx,byy,bw*clamp(u.hp/u.maxHp,0,1),bh);
+
+    if(u.retreat>0){ // lured marker
+      ctx.font='12px serif'; ctx.textAlign='center';
+      ctx.fillText('❓', u.x, u.y-u.r-16);
+    }
+  }
+
+  function drawEffects(){
+    for(const e of effects){
+      if(e.type==='shot'){
+        const p=e.t/e.life;
+        const x=e.x+(e.tx-e.x)*p, y=e.y+(e.ty-e.y)*p;
+        ctx.fillStyle = e.team==='cat' ? '#ff9ec4' : '#ffe08a';
+        ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+      } else if(e.type==='can'){
+        const p=e.t/e.life;
+        ctx.globalAlpha = 1-p;
+        ctx.font='26px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('🥫', e.x, e.y - Math.sin(p*Math.PI)*10);
+        ctx.strokeStyle='rgba(255,211,78,'+(0.6*(1-p))+')'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(e.x,e.y,20+p*40,0,Math.PI*2); ctx.stroke();
+        ctx.globalAlpha=1;
+      }
+    }
+  }
+
+  function drawFloaters(){
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(const f of floaters){
+      const a=1-(f.t/f.life);
+      ctx.globalAlpha=clamp(a,0,1);
+      ctx.font='bold 13px system-ui, sans-serif';
+      ctx.fillStyle=f.color;
+      ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3;
+      ctx.strokeText(f.text,f.x,f.y); ctx.fillText(f.text,f.x,f.y);
+    }
+    ctx.globalAlpha=1;
+  }
+
+  // ---------- Loop ----------
+  function tick(t){
+    if(!running) return;
+    const dt = Math.min(0.05, (t-lastT)/1000 || 0);
+    lastT=t;
+    if(!state.over){
+      updateWaves(dt);
+      updateUnits(dt);
+      // gold trickle
+      state.goldTimer += dt;
+      if(state.goldTimer>=1){ state.goldTimer-=1; state.gold += 2; }
+      // cooldowns
+      for(const k in cds){ if(cds[k]>0) cds[k]=Math.max(0,cds[k]-dt); }
+    }
+    updateFX(dt);
+    draw();
+    syncUI();
+    animId=requestAnimationFrame(tick);
+  }
+
+  // ---------- UI sync ----------
+  let cds={};
+  const el = id=>document.getElementById(id);
+  function syncUI(){
+    el('uiGold').textContent = Math.floor(state.gold);
+    el('uiScore').textContent = state.score;
+    el('uiWave').textContent = state.wave;
+    const frac = clamp(state.baseHp/state.baseMax,0,1);
+    el('uiBaseHp').style.width = (frac*100)+'%';
+    el('uiBaseHp').style.background = frac>0.5
+      ? 'linear-gradient(90deg,#57e39b,#2fd07a)'
+      : frac>0.25 ? 'linear-gradient(90deg,#ffd34e,#f0a020)'
+      : 'linear-gradient(90deg,#ff6a6a,#e83b3b)';
+    el('uiBaseHpText').textContent = Math.max(0,Math.ceil(state.baseHp))+' / '+state.baseMax;
+    // button states
+    for(const key in CAT_TYPES){ updateBtn('cat_'+key, CAT_TYPES[key].cost); }
+    for(const key in ITEMS){ updateBtn('item_'+key, ITEMS[key].cost); }
+  }
+  function updateBtn(id, cost){
+    const btn=document.querySelector('[data-id="'+id+'"]'); if(!btn) return;
+    const cd=cds[id]||0;
+    const cdEl=btn.querySelector('.cd');
+    const total = id.startsWith('cat_') ? CAT_TYPES[id.slice(4)].cd : ITEMS[id.slice(5)].cd;
+    cdEl.style.transform='scaleY('+ (cd>0? cd/total : 0) +')';
+    const afford = state.gold>=cost && cd<=0 && !state.over;
+    btn.classList.toggle('disabled', !afford);
+  }
+
+  // ---------- Build dock buttons ----------
+  function buildDock(){
+    const catRow=el('catRow'), itemRow=el('itemRow');
+    catRow.innerHTML=''; itemRow.innerHTML='';
+    for(const key in CAT_TYPES){
+      const t=CAT_TYPES[key];
+      const b=document.createElement('div');
+      b.className='gbtn'; b.dataset.id='cat_'+key;
+      b.innerHTML=`<span class="g-emoji">${t.emoji}</span>
+        <span class="g-name">${t.name}</span>
+        <span class="g-role">${t.role}</span>
+        <span class="g-cost">💰${t.cost}</span>
+        <span class="cd"></span>`;
+      b.addEventListener('click', ()=>trySpawnCat(key));
+      catRow.appendChild(b);
+    }
+    for(const key in ITEMS){
+      const t=ITEMS[key];
+      const b=document.createElement('div');
+      b.className='gbtn'; b.dataset.id='item_'+key;
+      b.innerHTML=`<span class="g-emoji">${t.emoji}</span>
+        <span class="g-name">${t.name}</span>
+        <span class="g-role">${t.role}</span>
+        <span class="g-cost">💰${t.cost}</span>
+        <span class="cd"></span>`;
+      b.addEventListener('click', ()=>useItem(key));
+      itemRow.appendChild(b);
+    }
+  }
+
+  // ---------- Banners / feedback ----------
+  let bannerTimer=null;
+  function banner(txt){
+    const b=el('waveBanner'); b.textContent=txt; b.classList.add('show');
+    clearTimeout(bannerTimer); bannerTimer=setTimeout(()=>b.classList.remove('show'),1800);
+  }
+  function flashDock(){ pulse('#ff4d4d'); }
+  function pulse(color){
+    const s=el('shell');
+    s.animate([{boxShadow:'0 0 0 0 '+color},{boxShadow:'0 0 0 0 transparent'}],{duration:400});
+  }
+
+  // ---------- Game over ----------
+  function gameOver(){
+    state.over=true;
+    const ov=el('overlay'); ov.classList.remove('hide');
+    el('overlayTitle').textContent='기지 함락… 😿';
+    el('overlaySub').innerHTML=`웨이브 <b>${state.wave}</b> 까지 버텼습니다.<br>최종 점수 <b style="color:var(--gold)">${state.score}</b>점`;
+    el('startBtn').textContent='다시 도전';
+  }
+
+  // ---------- Start ----------
+  function startGame(){
+    reset(); buildDock();
+    el('overlay').classList.add('hide');
+    running=true; lastT=performance.now();
+    state.waveBreak=1.2;
+    cancelAnimationFrame(animId);
+    animId=requestAnimationFrame(tick);
+  }
+
+  el('startBtn').addEventListener('click', startGame);
+
+  // init
+  resize(); reset(); buildDock(); syncUI(); draw();
+  window.addEventListener('resize', ()=>{ resize(); draw(); });
+
+})();
+</script>
