@@ -48,7 +48,7 @@
         <div class="overlay-card">
           <canvas id="heroArt" class="hero-art"></canvas>
           <h2 id="overlayTitle">애니팡 1000점!</h2>
-          <p id="overlaySub">프렌즈를 소환해 길냥이 갱단을 처치! <b>1000점 먼저 달성</b>하면 클리어.<br>적은 <b>5초마다 대포</b>로 기지를 포격해요 — <b>기술자 애니</b>로 수리하며 버티세요!<br>얼마나 빨리 깨는지 <b>타임 어택</b>에 도전!</p>
+          <p id="overlaySub">프렌즈를 소환해 길냥이 갱단을 처치! <b>1000점 먼저 달성</b>하면 클리어.<br>적은 <b>5초마다 대포</b>로 기지에 30 피해 — <b>기지 회복</b> 아이템으로 수리하세요!<br>얼마나 빨리 깨는지 <b>타임 어택</b>에 도전!</p>
           <div class="best" id="bestLine">아직 기록 없음</div>
           <button class="start-btn" id="startBtn">전투 시작</button>
         </div>
@@ -255,8 +255,8 @@
              hp:80,  atk:16, atkInt:1.1, range:150, speed:30, kind:'ranged'},
     dps:    {name:'몽이', role:'딜러',  emoji:'🐵', color:'#8a5a3b', cost:35, cd:1.6,
              hp:110, atk:34, atkInt:0.7, range:36, speed:40, kind:'melee'},
-    heal:   {name:'애니', role:'기술자', emoji:'🐰', color:'#f7e3ea', cost:55, cd:4.0,
-             hp:130, atk:0,  atkInt:1.0, range:0,   speed:30, kind:'engineer', repair:16},
+    heal:   {name:'애니', role:'힐러',  emoji:'🐰', color:'#f7e3ea', cost:55, cd:4.0,
+             hp:95,  atk:0,  atkInt:1.0, range:130, speed:26, kind:'heal', healAmt:10},
   };
 
   const ENEMY_TYPES = {
@@ -268,7 +268,7 @@
   const ITEMS = {
     churu:{name:'전체 회복', emoji:'🍡', cost:50, cd:6},
     can:  {name:'적 유인', emoji:'🥫', cost:60, cd:9},
-    rod:  {name:'공격 물약', emoji:'🎣', cost:80, cd:5},
+    rod:  {name:'기지 회복', emoji:'🔧', cost:80, cd:5},
   };
 
   // ---------- Game state ----------
@@ -319,7 +319,7 @@
       // 2마리씩 소환되므로 개체 체력·공격력을 나눠 총합 밸런스를 유지
       u.maxHp = Math.max(1, Math.round(t.hp*CAT_POWER)); u.hp=u.maxHp;
       u.atk = Math.round(t.atk*CAT_POWER);
-      if(t.repair) u.repair = Math.max(1, Math.round(t.repair*CAT_POWER));
+      if(t.healAmt) u.healAmt = Math.max(1, Math.round(t.healAmt*CAT_POWER));
     }
     return u;
   }
@@ -353,9 +353,10 @@
         if(u.hp>before){ healed=true; addFloater(u.x,u.y-16,'+'+Math.round(u.hp-before),'#57e39b',-24);} }}
       pulse('#57e39b');
     } else if(key==='rod'){
-      state.atkMul += 0.10;
-      addFloater(W/2, baseY()-40, '공격력 +10% (x'+state.atkMul.toFixed(1)+')', '#ff9ec4', -34);
-      pulse('#ff3d7f');
+      const before=state.baseHp;
+      state.baseHp=Math.min(state.baseMax, state.baseHp + Math.round(state.baseMax*0.4));
+      addFloater(W/2, baseY()-30, '기지 +'+Math.round(state.baseHp-before), '#57e39b', -30);
+      pulse('#57e39b');
     } else if(key==='can'){
       // throw a can into enemy territory -> enemies retreat toward top
       const cx = W/2 + (Math.random()*80-40);
@@ -449,19 +450,17 @@
       if(u.hit>0) u.hit-=dt;
       if(u.retreat>0) u.retreat-=dt;
 
-      // ---- ENGINEER (애니): 벽에 붙어 기지 HP 수리 ----
-      if(u.kind==='engineer'){
-        const wallY = baseY()-u.r-2;
-        if(u.y < wallY){ u.y += u.speed*dt; }   // 벽으로 이동
-        else {
-          u.y = wallY;
-          if(u.cd<=0 && state.baseHp<state.baseMax){
-            const amt=u.repair;
-            state.baseHp=Math.min(state.baseMax, state.baseHp+amt);
-            u.cd=u.atkInt;
-            addFloater(u.x, u.y-14, '+'+amt, '#57e39b', -18);
-          }
+      // ---- HEALER (애니): 아군 회복 ----
+      if(u.kind==='heal'){
+        const target = lowestAllyInRange(u);
+        if(target && u.cd<=0){
+          const amt=u.healAmt;
+          target.hp=Math.min(target.maxHp, target.hp+amt);
+          u.cd=u.atkInt;
+          addFloater(target.x, target.y-16, '+'+amt, '#57e39b', -20);
         }
+        const front = frontCatY();
+        if(u.y > front+60) u.y -= u.speed*dt;   // 전선 뒤에서 따라감
         keepX(u);
         continue;
       }
@@ -535,7 +534,7 @@
 
   function frontCatY(){
     let y=baseY();
-    for(const u of units){ if(u.team==='cat' && u.kind!=='engineer' && u.y<y) y=u.y; }
+    for(const u of units){ if(u.team==='cat' && u.kind!=='heal' && u.y<y) y=u.y; }
     return y;
   }
   function keepX(u){ u.x = clamp(u.x, LANE_PAD, W-LANE_PAD); }
@@ -589,7 +588,7 @@
     const sy = src ? src.y : spawnY()-14;
     const tx = W*0.28 + Math.random()*W*0.44;
     const ty = baseY() + (H-baseY())*0.35;
-    const dmg = 12 + Math.round(state.wave*1.5);
+    const dmg = 30;
     effects.push({type:'cannon', x:sx, y:sy, tx, ty, t:0, life:0.85, dmg});
   }
   function cannonImpact(e){
@@ -823,17 +822,23 @@
         const p=e.t/e.life;
         const x=e.x+(e.tx-e.x)*p;
         const y=e.y+(e.ty-e.y)*p - Math.sin(p*Math.PI)*90;  // 포물선 궤적
-        ctx.strokeStyle='rgba(255,138,61,0.35)'; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.moveTo(x,y+7); ctx.lineTo(x,y+18); ctx.stroke();
-        ctx.fillStyle='#2a2233'; ctx.strokeStyle='#ff8a3d'; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle='rgba(255,138,61,0.22)';               // 화염 글로우
+        ctx.beginPath(); ctx.arc(x,y,15,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='rgba(255,138,61,0.4)'; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(x,y+11); ctx.lineTo(x,y+28); ctx.stroke();
+        ctx.fillStyle='#241d30'; ctx.strokeStyle='#ff8a3d'; ctx.lineWidth=2.5;
+        ctx.beginPath(); ctx.arc(x,y,9,0,Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle='rgba(255,220,150,0.9)';               // 하이라이트
+        ctx.beginPath(); ctx.arc(x-3,y-3,2.5,0,Math.PI*2); ctx.fill();
       } else if(e.type==='boom'){
         const p=e.t/e.life;
         ctx.globalAlpha=1-p;
         ctx.fillStyle='rgba(255,150,60,'+(1-p)+')';
-        ctx.beginPath(); ctx.arc(e.x,e.y,10+p*30,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='rgba(255,90,60,'+(0.8*(1-p))+')';
-        ctx.beginPath(); ctx.arc(e.x,e.y,4+p*16,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x,e.y,15+p*46,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='rgba(255,90,60,'+(0.85*(1-p))+')';
+        ctx.beginPath(); ctx.arc(e.x,e.y,7+p*26,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='rgba(255,235,180,'+(0.9*(1-p))+')';
+        ctx.beginPath(); ctx.arc(e.x,e.y,3+p*12,0,Math.PI*2); ctx.fill();
         ctx.globalAlpha=1;
       }
     }
