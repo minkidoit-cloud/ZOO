@@ -272,9 +272,10 @@
   };
 
   const ENEMY_TYPES = {
-    brown: {name:'갈색', color:'#8B5E3C', hp:110, atk:12, atkInt:1.0, range:34, speed:22, gold:14, score:10, kind:'melee'},
-    black: {name:'검정', color:'#3b3742', hp:75,  atk:11, atkInt:0.8, range:30, speed:46, gold:18, score:14, kind:'melee'},
-    yellow:{name:'노랑', color:'#c99a2e', hp:70,  atk:13, atkInt:1.2, range:140,speed:18, gold:22, score:18, kind:'ranged'},
+    warrior:{name:'전사', color:'#4a86c8', hp:150, atk:12, atkInt:1.0, range:34, speed:20, gold:16, score:12, kind:'melee'},
+    archer: {name:'궁수', color:'#9a9aa2', hp:70,  atk:13, atkInt:1.2, range:140,speed:18, gold:20, score:16, kind:'ranged'},
+    dps:    {name:'딜러', color:'#c8923e', hp:85,  atk:18, atkInt:0.8, range:32, speed:42, gold:20, score:16, kind:'melee'},
+    healer: {name:'힐러', color:'#e8e8ee', hp:80,  atk:0,  atkInt:1.4, range:120,speed:22, gold:24, score:20, kind:'heal', healAmt:14},
   };
 
   const ITEMS = {
@@ -325,7 +326,7 @@
       x: laneX(),
       y: team==='cat' ? baseY()-6 : spawnY(),
       cd:0, retreat:0, hit:0,
-      r: (team==='cat' ? (key==='tank'?18:15) : (key==='black'?13:15)) * 0.85,
+      r: (team==='cat' ? (key==='tank'?18:15) : (key==='dps'?13:16)) * 0.85,
     };
     if(team==='cat'){
       // 2마리씩 소환되므로 개체 체력·공격력을 나눠 총합 밸런스를 유지
@@ -389,10 +390,11 @@
     if(giant) count = Math.round(count*2.2);
     const q = [];
     for(let i=0;i<count;i++){
-      let key='brown';
+      let key='warrior';
       const roll=Math.random();
-      if(n>=2 && roll<0.32) key='black';
-      else if(n>=3 && roll<0.55) key='yellow';
+      if(n>=2 && roll<0.30) key='dps';
+      else if(n>=3 && roll<0.50) key='archer';
+      else if(n>=4 && roll<0.60) key='healer';
       q.push(key);
     }
     state.spawnQueue = q;
@@ -447,7 +449,7 @@
   function lowestAllyInRange(u){
     let best=null, bv=1;
     for(const o of units){
-      if(o.dead || o.team!=='cat' || o===u) continue;
+      if(o.dead || o.team!==u.team || o===u) continue;
       if(dist(u,o) > u.range) continue;
       const frac=o.hp/o.maxHp;
       if(frac<bv && frac<1){ bv=frac; best=o; }
@@ -462,7 +464,7 @@
       if(u.hit>0) u.hit-=dt;
       if(u.retreat>0) u.retreat-=dt;
 
-      // ---- HEALER (애니): 아군 회복 ----
+      // ---- HEALER: 아군 회복 (아군 팀 기준) ----
       if(u.kind==='heal'){
         const target = lowestAllyInRange(u);
         if(target && u.cd<=0){
@@ -471,8 +473,12 @@
           u.cd=u.atkInt;
           addFloater(target.x, target.y-16, '+'+amt, '#57e39b', -20);
         }
-        const front = frontCatY();
-        if(u.y > front+60) u.y -= u.speed*dt;   // 전선 뒤에서 따라감
+        if(u.team==='cat'){
+          const front = frontCatY();
+          if(u.y > front+60) u.y -= u.speed*dt;      // 아군 힐러: 전선 뒤 따라감
+        } else {
+          if(u.y < baseY()-u.r-50) u.y += u.speed*dt; // 적 힐러: 뒤따라 내려옴
+        }
         keepX(u);
         continue;
       }
@@ -777,8 +783,11 @@
     ctx.moveTo(r*0.7,-r*0.4); ctx.lineTo(r*0.95,-r*1.15); ctx.lineTo(r*0.2,-r*0.75);
     ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#ffffff';
-    ctx.beginPath(); ctx.arc(-r*0.38,r*0.05,r*0.14,0,Math.PI*2); ctx.arc(r*0.38,r*0.05,r*0.14,0,Math.PI*2); ctx.fill();
+    // eyes: light sclera + dark pupil so they read on any body color
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.beginPath(); ctx.arc(-r*0.38,r*0.05,r*0.15,0,Math.PI*2); ctx.arc(r*0.38,r*0.05,r*0.15,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#2a2233';
+    ctx.beginPath(); ctx.arc(-r*0.36,r*0.06,r*0.08,0,Math.PI*2); ctx.arc(r*0.36,r*0.06,r*0.08,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=2; ctx.beginPath();
     ctx.moveTo(-r*0.6,-r*0.35); ctx.lineTo(-r*0.18,-r*0.08);
     ctx.moveTo(r*0.6,-r*0.35); ctx.lineTo(r*0.18,-r*0.08); ctx.stroke();
