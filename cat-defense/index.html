@@ -974,8 +974,8 @@
       updateWaves(dt);
       updateUnits(dt);
       separateUnits();
-      // passive income — ramps up with waves, keeps stacking even while idle
-      const income = 6 + state.wave*1.3;
+      // passive income — ramps up with waves, keeps stacking even while idle (30% 감소)
+      const income = (6 + state.wave*1.3) * 0.7;
       state.gold += income*dt;
       // 적 대포: 5초마다 기지 포격
       state.siegeTimer -= dt;
