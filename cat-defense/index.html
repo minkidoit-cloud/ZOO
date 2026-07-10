@@ -489,6 +489,24 @@
     return y;
   }
   function keepX(u){ u.x = clamp(u.x, LANE_PAD, W-LANE_PAD); }
+  // push overlapping units apart so they don't stack into one blob
+  function separateUnits(){
+    for(let i=0;i<units.length;i++){
+      const a=units[i]; if(a.dead) continue;
+      for(let j=i+1;j<units.length;j++){
+        const b=units[j]; if(b.dead) continue;
+        let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);
+        const min=(a.r+b.r)*0.95;
+        if(d===0){ dx=Math.random()-0.5; dy=Math.random()-0.5; d=Math.hypot(dx,dy)||1; }
+        if(d<min){
+          const push=(min-d)*0.5, nx=dx/d, ny=dy/d;
+          a.x-=nx*push; a.y-=ny*push;
+          b.x+=nx*push; b.y+=ny*push;
+        }
+      }
+    }
+    for(const u of units){ keepX(u); u.y=clamp(u.y, spawnY()-6, baseY()); }
+  }
   function moveToward(u, tx, ty, dt){
     const dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy);
     if(d<0.001) return;
@@ -750,6 +768,7 @@
     if(!state.over){
       updateWaves(dt);
       updateUnits(dt);
+      separateUnits();
       // passive income — ramps up with waves, keeps stacking even while idle
       const income = 6 + state.wave*1.3;
       state.gold += income*dt;
