@@ -162,6 +162,7 @@
   .gbtn:hover{border-color:var(--cat);}
   .gbtn:active{transform:scale(.95);}
   .gbtn .g-emoji{font-size:22px; line-height:1;}
+  .gbtn .g-icon{width:38px; height:38px; display:block; pointer-events:none;}
   .gbtn .g-name{font-size:11px; font-weight:700;}
   .gbtn .g-cost{font-size:11px; font-weight:800; color:var(--gold);
     font-variant-numeric:tabular-nums; display:flex; align-items:center; gap:2px;}
@@ -187,7 +188,7 @@
 
   // ---------- Canvas setup ----------
   const canvas = document.getElementById('field');
-  const ctx = canvas.getContext('2d');
+  let ctx = canvas.getContext('2d');  // retargetable so button icons reuse the same draw fns
   let W = 0, H = 0, DPR = 1;
   const FIELD_ASPECT = 1.28; // height / width
 
@@ -212,7 +213,7 @@
   const CAT_TYPES = {
     tank:   {name:'블루', role:'전사',  emoji:'🐶', color:'#6ec6e8', cost:25, cd:1.2,
              hp:240, atk:14, atkInt:1.0, range:34, speed:26, kind:'melee'},
-    archer: {name:'아리', role:'궁수',  emoji:'🐱', color:'#b9b9c0', cost:40, cd:2.0,
+    archer: {name:'루시', role:'궁수',  emoji:'🐱', color:'#b9b9c0', cost:40, cd:2.0,
              hp:80,  atk:16, atkInt:1.1, range:150, speed:30, kind:'ranged'},
     dps:    {name:'몽이', role:'딜러',  emoji:'🐵', color:'#8a5a3b', cost:35, cd:1.6,
              hp:110, atk:34, atkInt:0.7, range:36, speed:40, kind:'melee'},
@@ -790,6 +791,19 @@
   }
 
   // ---------- Build dock buttons ----------
+  // render a character's head to a small canvas so the button icon == in-game art
+  function makeIcon(key){
+    const s=38, dpr=Math.min(window.devicePixelRatio||1,2);
+    const c=document.createElement('canvas');
+    c.className='g-icon'; c.width=s*dpr; c.height=s*dpr;
+    c.style.width=s+'px'; c.style.height=s+'px';
+    const ic=c.getContext('2d'); ic.setTransform(dpr,0,0,dpr,0,0);
+    const saved=ctx; ctx=ic;               // temporarily retarget the draw fns
+    ctx.save(); ctx.translate(s/2, s*0.62); (CAT_DRAW[key]||drawDog)(12); ctx.restore();
+    ctx=saved;
+    return c;
+  }
+
   function buildDock(){
     const catRow=el('catRow'), itemRow=el('itemRow');
     catRow.innerHTML=''; itemRow.innerHTML='';
@@ -797,11 +811,11 @@
       const t=CAT_TYPES[key];
       const b=document.createElement('div');
       b.className='gbtn'; b.dataset.id='cat_'+key;
-      b.innerHTML=`<span class="g-emoji">${t.emoji}</span>
-        <span class="g-name">${t.name}</span>
+      b.innerHTML=`<span class="g-name">${t.name}</span>
         <span class="g-role">${t.role}</span>
         <span class="g-cost">💰${t.cost}</span>
         <span class="cd"></span>`;
+      b.insertBefore(makeIcon(key), b.firstChild);
       b.addEventListener('click', ()=>trySpawnCat(key));
       catRow.appendChild(b);
     }
