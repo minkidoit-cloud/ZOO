@@ -262,9 +262,12 @@
   function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
   function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 
+  const SUMMON_COUNT = 2;               // 소환 1회당 나오는 마리 수
+  const CAT_POWER = 1 / SUMMON_COUNT;   // 개체 스탯 = 원래/마리수 → 총 전력은 동일
+
   function makeUnit(team, key){
     const t = team==='cat' ? CAT_TYPES[key] : ENEMY_TYPES[key];
-    return {
+    const u = {
       team, key, ...t,
       maxHp:t.hp, hp:t.hp,
       x: laneX(),
@@ -272,6 +275,13 @@
       cd:0, retreat:0, hit:0,
       r: (team==='cat' ? (key==='tank'?18:15) : (key==='black'?13:15)) * 0.85,
     };
+    if(team==='cat'){
+      // 2마리씩 소환되므로 개체 체력·공격력을 나눠 총합 밸런스를 유지
+      u.maxHp = Math.max(1, Math.round(t.hp*CAT_POWER)); u.hp=u.maxHp;
+      u.atk = Math.round(t.atk*CAT_POWER);
+      if(t.healAmt) u.healAmt = Math.max(1, Math.round(t.healAmt*CAT_POWER));
+    }
+    return u;
   }
 
   // ---------- Spawning cats ----------
@@ -282,9 +292,9 @@
     if(state.gold < t.cost) { flashDock(); return; }
     state.gold -= t.cost;
     cds['cat_'+key] = t.cd;
-    // one summon fields two friends
-    for(let i=0;i<2;i++){ units.push(makeUnit('cat', key)); }
-    addFloater(W/2, baseY()-22, t.name+' x2!', t.color, -30);
+    // one summon fields multiple friends
+    for(let i=0;i<SUMMON_COUNT;i++){ units.push(makeUnit('cat', key)); }
+    addFloater(W/2, baseY()-22, t.name+' x'+SUMMON_COUNT+'!', t.color, -30);
   }
 
   // ---------- Items ----------
