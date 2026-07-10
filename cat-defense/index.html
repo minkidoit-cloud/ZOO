@@ -228,9 +228,9 @@
   };
 
   const ITEMS = {
-    churu:{name:'츄르', emoji:'🍡', role:'전체 회복', cost:50, cd:6},
-    can:  {name:'캔간식', emoji:'🥫', role:'적 유인', cost:60, cd:9},
-    rod:  {name:'낚싯대', emoji:'🎣', role:'공격물약', cost:80, cd:5},
+    churu:{name:'전체 회복', emoji:'🍡', cost:50, cd:6},
+    can:  {name:'적 유인', emoji:'🥫', cost:60, cd:9},
+    rod:  {name:'공격 물약', emoji:'🎣', cost:80, cd:5},
   };
 
   // ---------- Game state ----------
@@ -825,7 +825,6 @@
       b.className='gbtn'; b.dataset.id='item_'+key;
       b.innerHTML=`<span class="g-emoji">${t.emoji}</span>
         <span class="g-name">${t.name}</span>
-        <span class="g-role">${t.role}</span>
         <span class="g-cost">💰${t.cost}</span>
         <span class="cd"></span>`;
       b.addEventListener('click', ()=>useItem(key));
