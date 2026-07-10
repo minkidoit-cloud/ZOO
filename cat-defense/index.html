@@ -419,19 +419,28 @@
       const {t:tgt, d} = nearestEnemyOf(u, units);
 
       if(u.team==='cat'){
-        if(tgt && d <= u.range){
-          if(u.cd<=0){ attack(u, tgt); u.cd=u.atkInt; }
+        if(tgt){
+          if(d <= u.range){
+            // in range -> attack (ranged holds distance, melee closes in)
+            if(u.cd<=0){ attack(u, tgt); u.cd=u.atkInt; }
+          } else {
+            // charge toward the nearest enemy (x and y)
+            moveToward(u, tgt.x, tgt.y, dt);
+          }
         } else {
-          // advance upward
-          u.y -= u.speed*dt;
-          u.y = Math.max(spawnY()-4, u.y);
+          // no enemies -> hold near the front line
+          moveToward(u, u.x, spawnY()+H*0.28, dt);
         }
       } else {
         // enemy
         if(tgt && d <= u.range){
           if(u.cd<=0){ attack(u, tgt); u.cd=u.atkInt; }
+        } else if(tgt && d < u.range + 70){
+          // a cat is blocking the way -> engage it
+          moveToward(u, tgt.x, tgt.y, dt);
         } else if(u.y < baseY()-u.r){
-          u.y += u.speed*dt;
+          // push down toward the base
+          moveToward(u, u.x, baseY(), dt);
         } else {
           // attack base
           if(u.cd<=0){
@@ -472,6 +481,14 @@
     return y;
   }
   function keepX(u){ u.x = clamp(u.x, LANE_PAD, W-LANE_PAD); }
+  function moveToward(u, tx, ty, dt){
+    const dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy);
+    if(d<0.001) return;
+    const step = u.speed*dt;
+    u.x += dx/d*step;
+    u.y += dy/d*step;
+    u.y = clamp(u.y, spawnY()-6, baseY());
+  }
 
   // ---------- Floaters & effects ----------
   function addFloater(x,y,text,color,vy){ floaters.push({x,y,text,color,t:0,life:0.9,vy:vy||-24}); }
