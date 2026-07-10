@@ -6,8 +6,8 @@
       <div class="hud-title">
         <span class="paw">🐾</span>
         <div>
-          <h1>냥냥 갱워</h1>
-          <p>집사의 기지 방어전 · 프로토타입</p>
+          <h1>애니팡 1000점!</h1>
+          <p>1000점 먼저 달성하고 · 클리어 타임에 도전</p>
         </div>
       </div>
       <div class="hud-stats">
@@ -15,19 +15,26 @@
           <span class="stat-label">골드</span>
           <span class="stat-value" id="uiGold">0</span>
         </div>
-        <div class="stat score">
-          <span class="stat-label">점수</span>
-          <span class="stat-value" id="uiScore">0</span>
-        </div>
         <div class="stat wave">
           <span class="stat-label">웨이브</span>
           <span class="stat-value" id="uiWave">1</span>
         </div>
+        <div class="stat time">
+          <span class="stat-label">시간</span>
+          <span class="stat-value" id="uiTime">0.0s</span>
+        </div>
+      </div>
+      <div class="goal">
+        <div class="base-hp-top">
+          <span>🎯 목표 점수</span>
+          <span id="uiGoalText">0 / 1000</span>
+        </div>
+        <div class="bar"><div class="bar-fill goal-fill" id="uiGoal"></div></div>
       </div>
       <div class="base-hp">
         <div class="base-hp-top">
           <span>🏠 기지 HP</span>
-          <span id="uiBaseHpText">100 / 100</span>
+          <span id="uiBaseHpText">120 / 120</span>
         </div>
         <div class="bar"><div class="bar-fill" id="uiBaseHp"></div></div>
       </div>
@@ -40,8 +47,8 @@
       <div class="overlay" id="overlay">
         <div class="overlay-card">
           <div class="overlay-emoji">🐱‍👤</div>
-          <h2 id="overlayTitle">냥냥 갱워</h2>
-          <p id="overlaySub">위에서 흉터난 길냥이 갱단이 내려옵니다.<br>고양이 부대를 소환해 기지를 지키세요!</p>
+          <h2 id="overlayTitle">애니팡 1000점!</h2>
+          <p id="overlaySub">프렌즈를 소환해 길냥이 갱단을 처치!<br><b>1000점을 먼저 달성</b>하면 클리어.<br>얼마나 빨리 깨는지 <b>타임 어택</b>에 도전하세요!</p>
           <button class="start-btn" id="startBtn">전투 시작</button>
         </div>
       </div>
@@ -103,9 +110,10 @@
   .stat-label{font-size:10px; color:var(--muted); letter-spacing:1px; text-transform:uppercase;}
   .stat-value{font-size:19px; font-weight:800; font-variant-numeric:tabular-nums; margin-top:2px;}
   .stat.gold .stat-value{color:var(--gold);}
-  .stat.score .stat-value{color:var(--cat);}
   .stat.wave .stat-value{color:var(--enemy);}
+  .stat.time .stat-value{color:var(--ally); font-size:17px;}
 
+  .goal{margin-bottom:8px;}
   .base-hp-top{display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;
     color:var(--muted); font-variant-numeric:tabular-nums;}
   .base-hp-top span:first-child{color:var(--ink); font-weight:600;}
@@ -114,6 +122,8 @@
   .bar-fill{height:100%; width:100%;
     background:linear-gradient(90deg,#57e39b,#2fd07a);
     transition:width .2s ease, background .3s;}
+  .goal-fill{background:linear-gradient(90deg,var(--cat),var(--gold));
+    box-shadow:0 0 10px rgba(255,211,78,.4);}
 
   /* FIELD */
   .field-wrap{position:relative; background:#0e0a1a;}
@@ -261,6 +271,7 @@
   function newState(){
     return {
       gold:150, score:0, wave:0, baseHp:120, baseMax:120,
+      goal:1000, time:0, won:false,
       atkMul:1.0,                 // rod buff
       goldTimer:0,
       spawnQueue:[], spawnTimer:0, waveActive:false, waveBreak:2.0, enemiesLeft:0,
@@ -797,6 +808,7 @@
     const dt = Math.min(0.05, (t-lastT)/1000 || 0);
     lastT=t;
     if(!state.over){
+      state.time += dt;                 // 클리어 타임 측정
       updateWaves(dt);
       updateUnits(dt);
       separateUnits();
@@ -805,6 +817,8 @@
       state.gold += income*dt;
       // cooldowns
       for(const k in cds){ if(cds[k]>0) cds[k]=Math.max(0,cds[k]-dt); }
+      // 승리 조건: 목표 점수 달성
+      if(state.score >= state.goal) win();
     }
     updateFX(dt);
     draw();
@@ -817,8 +831,11 @@
   const el = id=>document.getElementById(id);
   function syncUI(){
     el('uiGold').textContent = Math.floor(state.gold);
-    el('uiScore').textContent = state.score;
     el('uiWave').textContent = state.wave;
+    el('uiTime').textContent = fmtTime(state.time);
+    const gfrac = clamp(state.score/state.goal,0,1);
+    el('uiGoal').style.width = (gfrac*100)+'%';
+    el('uiGoalText').textContent = state.score+' / '+state.goal;
     const frac = clamp(state.baseHp/state.baseMax,0,1);
     el('uiBaseHp').style.width = (frac*100)+'%';
     el('uiBaseHp').style.background = frac>0.5
@@ -900,12 +917,28 @@
     s.animate([{boxShadow:'0 0 0 0 '+color},{boxShadow:'0 0 0 0 transparent'}],{duration:400});
   }
 
-  // ---------- Game over ----------
+  // ---------- Time format ----------
+  function fmtTime(t){
+    const m=Math.floor(t/60), s=t%60;
+    return m>0 ? m+':'+s.toFixed(1).padStart(4,'0') : s.toFixed(1)+'s';
+  }
+
+  // ---------- Win / Game over ----------
+  function win(){
+    if(state.over) return;
+    state.over=true; state.won=true;
+    banner('🎉 1000점 달성!');
+    const ov=el('overlay'); ov.classList.remove('hide');
+    el('overlayTitle').textContent='🎉 스테이지 클리어!';
+    el('overlaySub').innerHTML=`목표 <b>1000점</b> 달성!<br>클리어 타임 <b style="color:var(--gold);font-size:22px">${fmtTime(state.time)}</b><br>웨이브 ${state.wave} · 더 빠른 기록에 도전하세요!`;
+    el('startBtn').textContent='다시 도전 (타임 어택)';
+  }
   function gameOver(){
+    if(state.over) return;
     state.over=true;
     const ov=el('overlay'); ov.classList.remove('hide');
     el('overlayTitle').textContent='기지 함락… 😿';
-    el('overlaySub').innerHTML=`웨이브 <b>${state.wave}</b> 까지 버텼습니다.<br>최종 점수 <b style="color:var(--gold)">${state.score}</b>점`;
+    el('overlaySub').innerHTML=`${state.score}점에서 기지가 무너졌습니다.<br>목표 <b>1000점</b>까지 <b style="color:var(--gold)">${Math.max(0,state.goal-state.score)}점</b> 남았어요. 다시 도전!`;
     el('startBtn').textContent='다시 도전';
   }
 
