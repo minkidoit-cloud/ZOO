@@ -46,9 +46,10 @@
       <div class="banner" id="waveBanner"></div>
       <div class="overlay" id="overlay">
         <div class="overlay-card">
-          <div class="overlay-emoji">🐱‍👤</div>
+          <canvas id="heroArt" class="hero-art"></canvas>
           <h2 id="overlayTitle">애니팡 1000점!</h2>
           <p id="overlaySub">프렌즈를 소환해 길냥이 갱단을 처치!<br><b>1000점을 먼저 달성</b>하면 클리어.<br>얼마나 빨리 깨는지 <b>타임 어택</b>에 도전하세요!</p>
+          <div class="best" id="bestLine">아직 기록 없음</div>
           <button class="start-btn" id="startBtn">전투 시작</button>
         </div>
       </div>
@@ -141,7 +142,13 @@
     transition:opacity .35s;}
   .overlay.hide{opacity:0; pointer-events:none;}
   .overlay-card{text-align:center; padding:26px; max-width:320px;}
-  .overlay-emoji{font-size:52px; margin-bottom:6px; filter:drop-shadow(0 6px 14px rgba(0,0,0,.5));}
+  .hero-art{display:block; margin:0 auto 4px; max-width:100%;
+    filter:drop-shadow(0 6px 14px rgba(0,0,0,.5));}
+  .best{margin:12px auto 4px; display:inline-block;
+    background:rgba(255,211,78,.12); border:1px solid rgba(255,211,78,.4);
+    color:var(--gold); font-weight:700; font-size:13px;
+    padding:5px 14px; border-radius:20px; letter-spacing:.3px;
+    font-variant-numeric:tabular-nums;}
   .overlay-card h2{margin:6px 0; font-size:26px; font-weight:800;
     background:linear-gradient(90deg,var(--cat),var(--enemy));
     -webkit-background-clip:text; background-clip:text; color:transparent;}
@@ -923,19 +930,60 @@
     return m>0 ? m+':'+s.toFixed(1).padStart(4,'0') : s.toFixed(1)+'s';
   }
 
+  // ---------- Best time (localStorage, with in-memory fallback) ----------
+  const BEST_KEY='anipang1000_best';
+  let memBest=null;
+  function getBest(){
+    try{ const v=parseFloat(localStorage.getItem(BEST_KEY)); if(!isNaN(v)) return v; }catch(e){}
+    return memBest;
+  }
+  function saveBest(t){ memBest=t; try{ localStorage.setItem(BEST_KEY, String(t)); }catch(e){} }
+  function refreshBest(){
+    const b=getBest();
+    el('bestLine').textContent = b==null ? '아직 기록 없음' : '🏆 최고 기록 '+fmtTime(b);
+  }
+
+  // ---------- Hero art: draw our four friends on the overlay ----------
+  function drawHero(){
+    const c=el('heroArt'); if(!c) return;
+    const keys=['tank','archer','dps','heal'];
+    const w=280, h=86, dpr=Math.min(window.devicePixelRatio||1,2);
+    c.width=w*dpr; c.height=h*dpr; c.style.width=w+'px'; c.style.height=h+'px';
+    const hc=c.getContext('2d'); hc.setTransform(dpr,0,0,dpr,0,0);
+    const saved=ctx; ctx=hc;
+    const gap=w/keys.length;
+    keys.forEach((k,i)=>{
+      ctx.save(); ctx.translate(gap*(i+0.5), h*0.6);
+      // little shadow
+      ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath();
+      ctx.ellipse(0,24,20,7,0,0,Math.PI*2); ctx.fill();
+      CAT_DRAW[k](21);
+      ctx.restore();
+    });
+    ctx=saved;
+  }
+
   // ---------- Win / Game over ----------
   function win(){
     if(state.over) return;
     state.over=true; state.won=true;
     banner('🎉 1000점 달성!');
+    const prev=getBest();
+    const isNew = prev==null || state.time<prev;
+    if(isNew) saveBest(state.time);
+    refreshBest();
     const ov=el('overlay'); ov.classList.remove('hide');
     el('overlayTitle').textContent='🎉 스테이지 클리어!';
-    el('overlaySub').innerHTML=`목표 <b>1000점</b> 달성!<br>클리어 타임 <b style="color:var(--gold);font-size:22px">${fmtTime(state.time)}</b><br>웨이브 ${state.wave} · 더 빠른 기록에 도전하세요!`;
+    const record = isNew
+      ? `🎉 <b style="color:var(--cat)">신기록 달성!</b>`
+      : `🏆 최고 기록 <b>${fmtTime(prev)}</b>`;
+    el('overlaySub').innerHTML=`목표 <b>1000점</b> 달성!<br>클리어 타임 <b style="color:var(--gold);font-size:24px">${fmtTime(state.time)}</b><br>${record}`;
     el('startBtn').textContent='다시 도전 (타임 어택)';
   }
   function gameOver(){
     if(state.over) return;
     state.over=true;
+    refreshBest();
     const ov=el('overlay'); ov.classList.remove('hide');
     el('overlayTitle').textContent='기지 함락… 😿';
     el('overlaySub').innerHTML=`${state.score}점에서 기지가 무너졌습니다.<br>목표 <b>1000점</b>까지 <b style="color:var(--gold)">${Math.max(0,state.goal-state.score)}점</b> 남았어요. 다시 도전!`;
@@ -955,8 +1003,8 @@
   el('startBtn').addEventListener('click', startGame);
 
   // init
-  resize(); reset(); buildDock(); syncUI(); draw();
-  window.addEventListener('resize', ()=>{ resize(); draw(); });
+  resize(); reset(); buildDock(); syncUI(); draw(); drawHero(); refreshBest();
+  window.addEventListener('resize', ()=>{ resize(); draw(); drawHero(); });
 
 })();
 </script>
