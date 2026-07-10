@@ -168,9 +168,18 @@
     font-variant-numeric:tabular-nums; display:flex; align-items:center; gap:2px;}
   .gbtn .g-role{font-size:9px; color:var(--muted); letter-spacing:.3px;}
   .gbtn.disabled{opacity:.42; cursor:not-allowed;}
-  .gbtn .cd{position:absolute; left:0; right:0; bottom:0; top:0;
-    background:rgba(10,7,18,.72); transform-origin:bottom; transform:scaleY(0);
-    pointer-events:none; display:flex; align-items:flex-end; justify-content:center;}
+  .gbtn .cd{position:absolute; inset:0; border-radius:14px; opacity:0;
+    background:rgba(8,5,16,.6); pointer-events:none;
+    display:flex; align-items:center; justify-content:center;}
+  .gbtn.cooling .cd{opacity:1;}
+  .gbtn.cooling{filter:grayscale(.55) brightness(.78);}
+  .gbtn .cd-text{font-size:21px; font-weight:800; color:#fff;
+    font-variant-numeric:tabular-nums; letter-spacing:.5px;
+    text-shadow:0 1px 5px rgba(0,0,0,.85);}
+  .gbtn .cd-bar{position:absolute; left:0; bottom:0; width:100%; height:5px;
+    transform-origin:left; transform:scaleX(0); border-radius:0 0 12px 12px;
+    background:linear-gradient(90deg,var(--cat),var(--gold));
+    box-shadow:0 0 8px rgba(255,211,78,.6);}
   .gbtn.armed{box-shadow:0 0 0 2px var(--cat), 0 0 18px rgba(255,61,127,.5);}
 
   @media (max-width:420px){
@@ -812,11 +821,15 @@
   function updateBtn(id, cost){
     const btn=document.querySelector('[data-id="'+id+'"]'); if(!btn) return;
     const cd=cds[id]||0;
-    const cdEl=btn.querySelector('.cd');
     const total = id.startsWith('cat_') ? CAT_TYPES[id.slice(4)].cd : ITEMS[id.slice(5)].cd;
-    cdEl.style.transform='scaleY('+ (cd>0? cd/total : 0) +')';
-    const afford = state.gold>=cost && cd<=0 && !state.over;
-    btn.classList.toggle('disabled', !afford);
+    const cooling = cd>0 && !state.over;
+    btn.classList.toggle('cooling', cooling);
+    // gold/게임오버로 인한 흐림은 쿨타임 중이 아닐 때만 (쿨타임 숫자는 또렷하게)
+    btn.classList.toggle('disabled', (state.gold<cost || state.over) && !cooling);
+    if(cooling){
+      btn.querySelector('.cd-bar').style.transform='scaleX('+(1-cd/total)+')';
+      btn.querySelector('.cd-text').textContent = cd.toFixed(1);
+    }
   }
 
   // ---------- Build dock buttons ----------
@@ -843,7 +856,7 @@
       b.innerHTML=`<span class="g-name">${t.name}</span>
         <span class="g-role">${t.role}</span>
         <span class="g-cost">💰${t.cost}</span>
-        <span class="cd"></span>`;
+        <span class="cd"><span class="cd-text"></span><span class="cd-bar"></span></span>`;
       b.insertBefore(makeIcon(key), b.firstChild);
       b.addEventListener('click', ()=>trySpawnCat(key));
       catRow.appendChild(b);
@@ -855,7 +868,7 @@
       b.innerHTML=`<span class="g-emoji">${t.emoji}</span>
         <span class="g-name">${t.name}</span>
         <span class="g-cost">💰${t.cost}</span>
-        <span class="cd"></span>`;
+        <span class="cd"><span class="cd-text"></span><span class="cd-bar"></span></span>`;
       b.addEventListener('click', ()=>useItem(key));
       itemRow.appendChild(b);
     }
