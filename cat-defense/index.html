@@ -210,13 +210,13 @@
   const LANE_PAD = 34;
 
   const CAT_TYPES = {
-    tank:   {name:'뚱냥이', role:'전사',  emoji:'🐈', color:'#f2a65a', cost:40, cd:3.0,
+    tank:   {name:'초록곰', role:'전사',  emoji:'🐻', color:'#9ccf5f', cost:40, cd:3.0,
              hp:240, atk:14, atkInt:1.0, range:34, speed:26, kind:'melee'},
-    archer: {name:'삼색이', role:'궁수',  emoji:'🐈', color:'#f0cd5e', cost:60, cd:4.5,
+    archer: {name:'원숭이', role:'궁수',  emoji:'🐵', color:'#8a5a3b', cost:60, cd:4.5,
              hp:80,  atk:16, atkInt:1.1, range:150, speed:30, kind:'ranged'},
-    dps:    {name:'검은냥', role:'딜러',  emoji:'🐈‍⬛', color:'#8a7bd8', cost:50, cd:5.0,
+    dps:    {name:'강아지', role:'딜러',  emoji:'🐶', color:'#6ec6e8', cost:50, cd:5.0,
              hp:110, atk:34, atkInt:0.7, range:36, speed:40, kind:'melee'},
-    heal:   {name:'하얀냥', role:'힐러',  emoji:'😻', color:'#f2f2fa', cost:70, cd:8.0,
+    heal:   {name:'토끼',   role:'힐러',  emoji:'🐰', color:'#f7e3ea', cost:70, cd:8.0,
              hp:95,  atk:0,  atkInt:1.0, range:130, speed:26, kind:'heal', healAmt:10},
   };
 
@@ -543,61 +543,140 @@
     ctx.fillText('🧶', W*0.78, by+(H-by)/2);
   }
 
+  // --- shared face parts (drawn in local space, head centered at 0,0) ---
+  function eyes(r, dy, sp, sz){
+    ctx.fillStyle='#2a2233';
+    ctx.beginPath();
+    ctx.ellipse(-sp,dy,sz,sz*1.15,0,0,Math.PI*2);
+    ctx.ellipse(sp,dy,sz,sz*1.15,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.arc(-sp+sz*0.3,dy-sz*0.45,sz*0.3,0,Math.PI*2);
+    ctx.arc(sp+sz*0.3,dy-sz*0.45,sz*0.3,0,Math.PI*2); ctx.fill();
+  }
+  function blush(r, dy, sp, col){
+    ctx.fillStyle=col||'rgba(255,140,155,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(-sp,dy,r*0.22,r*0.14,0,0,Math.PI*2);
+    ctx.ellipse(sp,dy,r*0.22,r*0.14,0,0,Math.PI*2); ctx.fill();
+  }
+
+  function drawBear(r){
+    const body='#9ccf5f', inner='#eaf5cf', line='rgba(80,110,40,0.45)';
+    ctx.strokeStyle=line; ctx.lineWidth=1.5; ctx.fillStyle=body;
+    ctx.beginPath(); ctx.arc(-r*0.6,-r*0.72,r*0.42,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(r*0.6,-r*0.72,r*0.42,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=inner;
+    ctx.beginPath(); ctx.arc(-r*0.6,-r*0.7,r*0.22,0,Math.PI*2); ctx.arc(r*0.6,-r*0.7,r*0.22,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=body; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#eef6d8'; ctx.beginPath(); ctx.ellipse(0,r*0.3,r*0.44,r*0.32,0,0,Math.PI*2); ctx.fill();
+    blush(r, r*0.18, r*0.62, 'rgba(120,180,70,0.4)');
+    eyes(r, -r*0.05, r*0.42, r*0.16);
+    ctx.fillStyle='#5a7a30'; ctx.beginPath(); ctx.arc(0,r*0.18,r*0.1,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#5a7a30'; ctx.lineWidth=1.5; ctx.beginPath();
+    ctx.moveTo(0,r*0.28); ctx.lineTo(0,r*0.36); ctx.stroke();
+  }
+  function drawMonkey(r){
+    const fur='#8a5a3b', face='#f0d6b0', line='rgba(70,40,20,0.45)';
+    ctx.strokeStyle=line; ctx.lineWidth=1.5; ctx.fillStyle=fur;
+    ctx.beginPath(); ctx.arc(-r*0.95,-r*0.02,r*0.34,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(r*0.95,-r*0.02,r*0.34,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=face; ctx.beginPath();
+    ctx.arc(-r*0.95,-r*0.02,r*0.17,0,Math.PI*2); ctx.arc(r*0.95,-r*0.02,r*0.17,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=fur; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=face; ctx.beginPath(); ctx.ellipse(0,r*0.12,r*0.72,r*0.66,0,0,Math.PI*2); ctx.fill();
+    eyes(r, -r*0.05, r*0.34, r*0.15);
+    blush(r, r*0.24, r*0.5, 'rgba(230,140,120,0.45)');
+    ctx.fillStyle='#b98a63'; ctx.beginPath();
+    ctx.arc(-r*0.08,r*0.24,r*0.05,0,Math.PI*2); ctx.arc(r*0.08,r*0.24,r*0.05,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#a9714a'; ctx.lineWidth=1.5; ctx.beginPath();
+    ctx.arc(0,r*0.28,r*0.18,0.15*Math.PI,0.85*Math.PI); ctx.stroke();
+  }
+  function drawDog(r){
+    const body='#6ec6e8', ear='#2f8fc0', cheek='#f4c542', line='rgba(30,90,130,0.45)';
+    ctx.strokeStyle=line; ctx.lineWidth=1.5; ctx.fillStyle=ear;
+    ctx.beginPath(); ctx.ellipse(-r*0.82,-r*0.45,r*0.3,r*0.5,0.3,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(r*0.82,-r*0.45,r*0.3,r*0.5,-0.3,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=body; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=cheek; ctx.beginPath();
+    ctx.arc(-r*0.62,r*0.36,r*0.2,0,Math.PI*2); ctx.arc(r*0.62,r*0.36,r*0.2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#cdeaf6'; ctx.beginPath(); ctx.ellipse(0,r*0.32,r*0.4,r*0.3,0,0,Math.PI*2); ctx.fill();
+    eyes(r, -r*0.05, r*0.36, r*0.16);
+    ctx.fillStyle='#1f3a4a'; ctx.beginPath(); ctx.arc(0,r*0.2,r*0.11,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#1f3a4a'; ctx.lineWidth=1.5; ctx.beginPath();
+    ctx.moveTo(0,r*0.31); ctx.lineTo(0,r*0.4); ctx.stroke();
+  }
+  function drawBunny(r){
+    const body='#f7e3ea', cap='#6b4a37', capD='#4f3628', lens='#8fd0e6', line='rgba(150,110,120,0.45)';
+    ctx.strokeStyle=line; ctx.lineWidth=1.5; ctx.fillStyle=body;
+    ctx.beginPath(); ctx.ellipse(-r*0.4,-r*1.12,r*0.2,r*0.58,0.12,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(r*0.4,-r*1.12,r*0.2,r*0.58,-0.12,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#f3c9d4';
+    ctx.beginPath(); ctx.ellipse(-r*0.4,-r*1.08,r*0.09,r*0.38,0.12,0,Math.PI*2);
+    ctx.ellipse(r*0.4,-r*1.08,r*0.09,r*0.38,-0.12,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=body; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    // aviator cap band across the top
+    ctx.save();
+    ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.clip();
+    ctx.fillStyle=cap; ctx.fillRect(-r,-r,r*2,r*0.62);
+    ctx.restore();
+    // goggles pushed up on the forehead
+    ctx.fillStyle=capD; ctx.beginPath();
+    ctx.arc(-r*0.4,-r*0.22,r*0.27,0,Math.PI*2); ctx.arc(r*0.4,-r*0.22,r*0.27,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=lens; ctx.beginPath();
+    ctx.arc(-r*0.4,-r*0.22,r*0.17,0,Math.PI*2); ctx.arc(r*0.4,-r*0.22,r*0.17,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.beginPath();
+    ctx.arc(-r*0.46,-r*0.28,r*0.06,0,Math.PI*2); ctx.arc(r*0.34,-r*0.28,r*0.06,0,Math.PI*2); ctx.fill();
+    eyes(r, r*0.24, r*0.34, r*0.14);
+    blush(r, r*0.36, r*0.55);
+    ctx.fillStyle='#e79aa8'; ctx.beginPath(); ctx.arc(0,r*0.44,r*0.07,0,Math.PI*2); ctx.fill();
+  }
+  const CAT_DRAW = {tank:drawBear, archer:drawMonkey, dps:drawDog, heal:drawBunny};
+
+  function drawEnemyCat(u){
+    const r=u.r, hit=u.hit>0;
+    ctx.fillStyle = hit ? '#ffffff' : u.color;
+    ctx.strokeStyle='rgba(232,163,61,0.9)'; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(-r*0.7,-r*0.4); ctx.lineTo(-r*0.95,-r*1.15); ctx.lineTo(-r*0.2,-r*0.75);
+    ctx.moveTo(r*0.7,-r*0.4); ctx.lineTo(r*0.95,-r*1.15); ctx.lineTo(r*0.2,-r*0.75);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#ffffff';
+    ctx.beginPath(); ctx.arc(-r*0.38,r*0.05,r*0.14,0,Math.PI*2); ctx.arc(r*0.38,r*0.05,r*0.14,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=2; ctx.beginPath();
+    ctx.moveTo(-r*0.6,-r*0.35); ctx.lineTo(-r*0.18,-r*0.08);
+    ctx.moveTo(r*0.6,-r*0.35); ctx.lineTo(r*0.18,-r*0.08); ctx.stroke();
+    ctx.strokeStyle='rgba(255,80,80,0.85)'; ctx.beginPath();
+    ctx.moveTo(r*0.5,-r*0.8); ctx.lineTo(r*0.2,-r*0.1); ctx.stroke();
+  }
+
   function drawUnit(u){
-    const hit = u.hit>0;
     ctx.save();
     ctx.translate(u.x,u.y);
     // shadow
     ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath();
-    ctx.ellipse(0,u.r*0.9,u.r*0.9,u.r*0.35,0,0,Math.PI*2); ctx.fill();
+    ctx.ellipse(0,u.r*0.95,u.r*0.9,u.r*0.35,0,0,Math.PI*2); ctx.fill();
 
-    // body circle
-    const col = hit ? '#ffffff' : u.color;
-    ctx.fillStyle=col;
-    ctx.strokeStyle = u.team==='cat' ? 'rgba(255,61,127,0.9)' : 'rgba(232,163,61,0.9)';
-    ctx.lineWidth=2;
-    // ears
-    ctx.beginPath();
-    ctx.moveTo(-u.r*0.7,-u.r*0.4); ctx.lineTo(-u.r*0.95,-u.r*1.15); ctx.lineTo(-u.r*0.2,-u.r*0.75);
-    ctx.moveTo(u.r*0.7,-u.r*0.4); ctx.lineTo(u.r*0.95,-u.r*1.15); ctx.lineTo(u.r*0.2,-u.r*0.75);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    // head
-    ctx.beginPath(); ctx.arc(0,0,u.r,0,Math.PI*2); ctx.fill(); ctx.stroke();
-
-    // face
-    const dir = u.team==='cat' ? -1 : 1; // cats look up, enemies look down
-    ctx.fillStyle = (u.color==='#f2f2fa'||u.color==='#f0cd5e'||u.color==='#f2a65a') ? '#2a2233' : '#ffffff';
-    // eyes
-    const ey = -u.r*0.05*dir;
-    ctx.beginPath(); ctx.arc(-u.r*0.38, ey, u.r*0.14, 0, Math.PI*2);
-    ctx.arc(u.r*0.38, ey, u.r*0.14, 0, Math.PI*2); ctx.fill();
-
-    if(u.team==='enemy'){
-      // angry brows + scar
-      ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=2; ctx.beginPath();
-      ctx.moveTo(-u.r*0.6,-u.r*0.35); ctx.lineTo(-u.r*0.18,-u.r*0.08);
-      ctx.moveTo(u.r*0.6,-u.r*0.35); ctx.lineTo(u.r*0.18,-u.r*0.08); ctx.stroke();
-      ctx.strokeStyle='rgba(255,80,80,0.8)'; ctx.beginPath();
-      ctx.moveTo(u.r*0.5,-u.r*0.8); ctx.lineTo(u.r*0.2,-u.r*0.1); ctx.stroke();
+    if(u.team==='cat'){
+      (CAT_DRAW[u.key]||drawBear)(u.r);
+      if(u.hit>0){ ctx.globalAlpha=0.4; ctx.fillStyle='#fff';
+        ctx.beginPath(); ctx.arc(0,0,u.r*1.05,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
     } else {
-      // role badge
-      const badge = {tank:'🛡',archer:'🏹',dps:'🗡',heal:'➕'}[u.key];
-      ctx.font = (u.r*0.9)+'px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillStyle='rgba(0,0,0,0.75)';
-      ctx.fillText(badge, 0, u.r*0.55);
+      drawEnemyCat(u);
     }
     ctx.restore();
 
     // HP bar
     const bw=u.r*2.0, bh=4;
-    const bx=u.x-bw/2, byy=u.y-u.r-11;
+    const bx=u.x-bw/2, byy=u.y-u.r-12;
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(bx-1,byy-1,bw+2,bh+2);
     ctx.fillStyle = u.team==='cat' ? '#57e39b' : '#ff6a6a';
     ctx.fillRect(bx,byy,bw*clamp(u.hp/u.maxHp,0,1),bh);
 
     if(u.retreat>0){ // lured marker
       ctx.font='12px serif'; ctx.textAlign='center';
-      ctx.fillText('❓', u.x, u.y-u.r-16);
+      ctx.fillText('❓', u.x, u.y-u.r-18);
     }
   }
 
